@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Sitemap: https://sveroust.github.io/jago-english/sitemap.xml
+

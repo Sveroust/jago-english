@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jago English · Latihan Bicara, Koreksi Kalimat, &amp; Peta Harian</title>
+  <meta name="description" content="Ruang latihan bicara dan menulis bahasa Inggris untuk penutur Indonesia: koreksi kalimat, panduan cara baca, peta jalan harian, 12 tenses, dan latihan kosakata.">
+  <meta name="font-spec" content="family=Lato">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#143CFA">
+  <link rel="canonical" href="https://sveroust.github.io/jago-english/">
+  <meta property="og:title" content="Jago English · Latihan Bicara, Koreksi Kalimat, &amp; Peta Harian">
+  <meta property="og:description" content="Ruang latihan bicara dan menulis bahasa Inggris untuk penutur Indonesia: koreksi kalimat, panduan cara baca, peta jalan harian, 12 tenses, dan latihan kosakata.">
+  <meta property="og:image" content="https://sveroust.github.io/jago-english/og-cover.svg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="fonts/lato-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/lato-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/lato-900-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a href="#main-workbench" class="skip-link">Loncat ke area latihan</a>
+
+  <header class="masthead" role="banner">
+    <div class="masthead-inner">
+      <div class="brand-block">
+        <a href="#main-workbench" class="brand-mark" id="brand-home-link">Jago<span>English</span></a>
+        <span class="brand-edition">Latihan Bicara &amp; Kurikulum A1-C2</span>
+      </div>
+      <div class="masthead-controls">
+        <button type="button" class="btn" id="open-protocol-modal-btn" aria-haspopup="dialog" aria-controls="protocol-modal">
+          Ringkasan &amp; Jadwal
+        </button>
+        <button type="button" class="btn" id="theme-toggle-btn" aria-label="Ganti tema tampilan terang atau gelap">
+          Mode Gelap
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="primary-nav" aria-label="Menu Utama">
+    <ul class="nav-list" role="tablist">
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-coach" aria-selected="true" aria-controls="panel-coach" data-tab="coach">
+          <span>Coach &amp; Peta Harian</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-curriculum" aria-selected="false" aria-controls="panel-curriculum" data-tab="curriculum">
+          <span>Kurikulum A1-C2</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-tenses" aria-selected="false" aria-controls="panel-tenses" data-tab="tenses">
+          <span>12 Tenses</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-srs" aria-selected="false" aria-controls="panel-srs" data-tab="srs">
+          <span>Kartu Kosakata</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-speaking" aria-selected="false" aria-controls="panel-speaking" data-tab="speaking">
+          <span>Pelafalan &amp; Intonasi</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-diagnostic" aria-selected="false" aria-controls="panel-diagnostic" data-tab="diagnostic">
+          <span>Uji Level &amp; Susun Kalimat</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-translate" aria-selected="false" aria-controls="panel-translate" data-tab="translate">
+          <span>Penerjemah Pikiran</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-topics" aria-selected="false" aria-controls="panel-topics" data-tab="topics">
+          <span>50 Topik IELTS &amp; TOEFL</span>
+        </button>
+      </li>
+      <li role="presentation">
+        <button type="button" role="tab" class="nav-tab" id="tab-btn-conversation" aria-selected="false" aria-controls="panel-conversation" data-tab="conversation">
+          <span>Percakapan Harian &amp; Bisnis</span>
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <main id="main-workbench" class="workbench-main" tabindex="-1">
+    <!-- MODULE: COACH & PETA HARIAN -->
+    <section id="panel-coach" class="module-panel is-active" role="tabpanel" aria-labelledby="tab-btn-coach">
+      <div class="section-header-clean">
+        <h1 class="section-title">Latihan Bicara, Koreksi Kalimat, &amp; Peta Harian</h1>
+        <p class="section-subtitle">
+          Rekam suara atau ketik kalimatmu, lalu lihat bagian yang keliru, alasan perbaikannya, versi kalimat yang lebih luwes (setara Band 7.5+), serta cara membacanya dengan ejaan lidah Indonesia.
+        </p>
+      </div>
+      <div id="coach-root"></div>
+    </section>
+
+    <!-- MODULE: KURIKULUM A1-C2 -->
+    <section id="panel-curriculum" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-curriculum">
+      <div class="section-header-clean">
+        <h2 class="section-title">Kurikulum Bahasa Inggris A1 sampai C2</h2>
+        <p class="section-subtitle">
+          Membedah perbedaan cara menyusun kalimat antara bahasa Indonesia dan bahasa Inggris. Pilih level di bawah untuk mempelajari pola kalimat, contoh percakapan, dan latihan singkat per unit.
+        </p>
+      </div>
+
+      <div class="cefr-selector-bar" id="cefr-level-buttons" role="group" aria-label="Pilih Level Kurikulum CEFR"></div>
+
+      <div id="curriculum-content-area" aria-live="polite"></div>
+    </section>
+
+    <!-- MODULE: MATRIKS 12 TENSES -->
+    <section id="panel-tenses" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-tenses">
+      <div class="section-header-clean">
+        <h2 class="section-title">Simulator 12 Tenses</h2>
+        <p class="section-subtitle">
+          Dua belas tenses bahasa Inggris berasal dari gabungan 3 waktu (Present, Past, Future) dan 4 sudut pandang kejadian (Simple, Continuous, Perfect, Perfect Continuous). Pilih contoh kalimat dan klik sel tabel untuk melihat perubahannya.
+        </p>
+      </div>
+
+      <div class="tense-controls-bar" role="region" aria-label="Pengaturan Simulasi Kalimat Tenses">
+        <div class="control-group">
+          <label for="tense-prop-select" class="control-label">Contoh kalimat:</label>
+          <select id="tense-prop-select" class="select-input"></select>
+        </div>
+        <div class="control-group" role="group" aria-label="Pilih Bentuk Kalimat">
+          <span class="control-label">Bentuk:</span>
+          <button type="button" class="btn polarity-btn" data-polarity="positive" aria-pressed="true">Positif</button>
+          <button type="button" class="btn polarity-btn" data-polarity="negative" aria-pressed="false">Negatif</button>
+          <button type="button" class="btn polarity-btn" data-polarity="question" aria-pressed="false">Tanya</button>
+        </div>
+        <div class="control-group" role="group" aria-label="Pilih Subjek Tunggal atau Jamak">
+          <span class="control-label">Subjek:</span>
+          <button type="button" class="btn subject-num-btn" data-subj="singular" aria-pressed="true">Tunggal (She/He)</button>
+          <button type="button" class="btn subject-num-btn" data-subj="plural" aria-pressed="false">Jamak (We/They/I)</button>
+        </div>
+      </div>
+
+      <div class="tense-workbench-layout">
+        <div class="tense-matrix-table-wrap">
+          <table class="tense-matrix-grid" aria-label="Matriks 12 Tenses Bahasa Inggris">
+            <thead>
+              <tr>
+                <th scope="col">Aspek / Waktu</th>
+                <th scope="col">Present (Sekarang)</th>
+                <th scope="col">Past (Lampau)</th>
+                <th scope="col">Future (Akan Datang)</th>
+              </tr>
+            </thead>
+            <tbody id="tense-matrix-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-card" id="tense-inspector-panel" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- MODULE: KARTU KOSAKATA -->
+    <section id="panel-srs" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-srs">
+      <div class="section-header-clean">
+        <h2 class="section-title">Kartu Kosakata &amp; Frasa Penting</h2>
+        <p class="section-subtitle">
+          Latih kosakata kerja, bisnis, dan akademik dari level A1 hingga C2. Tekan <code>Spasi</code> untuk membuka arti, lalu pilih tombol <code>1</code> sampai <code>4</code> sesuai seberapa lancar kamu mengingatnya.
+        </p>
+      </div>
+
+      <div class="tense-controls-bar" role="region" aria-label="Filter Dek Kartu Kosakata">
+        <div class="control-group">
+          <label for="srs-level-filter" class="control-label">Level:</label>
+          <select id="srs-level-filter" class="select-input">
+            <option value="ALL">Semua Level (A1-C2)</option>
+            <option value="A1">A1 · Dasar</option>
+            <option value="A2">A2 · Pemula Lanjut</option>
+            <option value="B1">B1 · Menengah</option>
+            <option value="B2">B2 · Menengah Atas</option>
+            <option value="C1">C1 · Mahir</option>
+            <option value="C2">C2 · Fasih</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="srs-category-filter" class="control-label">Kategori:</label>
+          <select id="srs-category-filter" class="select-input">
+            <option value="ALL">Semua Kategori</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="srs-search-input" class="control-label">Cari kata:</label>
+          <input type="search" id="srs-search-input" class="text-input" placeholder="Ketik kata (mis. mitigate)...">
+        </div>
+        <div class="control-group">
+          <button type="button" class="btn" id="srs-reset-filter-btn">Tampilkan Semua</button>
+        </div>
+      </div>
+
+      <div class="srs-layout">
+        <div id="srs-stage-container" aria-live="polite"></div>
+
+        <div>
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h2 class="panel-card-title">Tambah Kosakata Sendiri</h2>
+            </div>
+            <form id="custom-card-form" novalidate>
+              <div style="margin-bottom: 12px;">
+                <label for="custom-term-input" class="control-label" style="display:block; margin-bottom:4px;">Kata atau frasa bahasa Inggris *</label>
+                <input type="text" id="custom-term-input" class="text-input" style="width:100%;" placeholder="Contoh: economies of scale" required>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                  <label for="custom-level-select" class="control-label" style="display:block; margin-bottom:4px;">Level CEFR</label>
+                  <select id="custom-level-select" class="select-input" style="width:100%;">
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2" selected>B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="custom-ipa-input" class="control-label" style="display:block; margin-bottom:4px;">Cara baca / IPA (opsional)</label>
+                  <input type="text" id="custom-ipa-input" class="text-input" style="width:100%;" placeholder="Contoh: /ɪˈkɒn.ə.miz/">
+                </div>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label for="custom-meaning-input" class="control-label" style="display:block; margin-bottom:4px;">Arti dalam bahasa Indonesia *</label>
+                <input type="text" id="custom-meaning-input" class="text-input" style="width:100%;" placeholder="Contoh: Efisiensi biaya karena produksi skala besar" required>
+              </div>
+              <div style="margin-bottom: 14px;">
+                <label for="custom-example-input" class="control-label" style="display:block; margin-bottom:4px;">Contoh kalimat *</label>
+                <input type="text" id="custom-example-input" class="text-input" style="width:100%;" placeholder="Contoh: Larger factories achieve stronger economies of scale." required>
+              </div>
+              <div id="custom-card-feedback" aria-live="polite"></div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Simpan Kartu</button>
+            </form>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h2 class="panel-card-title">Daftar Kartu (<span id="srs-list-count">0</span>)</h2>
+            </div>
+            <div id="srs-deck-mini-list" style="max-height: 280px; overflow-y: auto;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE: PELAFALAN & INTONASI -->
+    <section id="panel-speaking" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-speaking">
+      <div class="section-header-clean">
+        <h2 class="section-title">Latihan Pelafalan, Sambungan Kata, &amp; Tekanan Kalimat</h2>
+        <p class="section-subtitle">
+          Dengarkan contoh pengucapan kecepatan normal dan lambat, rekam suaramu lewat mikrofon, lalu pelajari bagaimana makna kalimat berubah saat tekanan suara dipindahkan ke kata yang berbeda.
+        </p>
+      </div>
+
+      <div class="curriculum-grid">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h2 class="panel-card-title">Latihan Menirukan Suara (Shadowing)</h2>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label for="shadowing-select" class="control-label" style="display:block; margin-bottom:6px;">Pilih kalimat latihan:</label>
+            <select id="shadowing-select" class="select-input" style="width:100%;"></select>
+          </div>
+
+          <div id="shadowing-detail-box"></div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top: 16px;">
+            <button type="button" class="btn btn-primary" id="speak-native-normal-btn">Putar Normal (1.0x)</button>
+            <button type="button" class="btn" id="speak-native-slow-btn">Putar Lambat (0.8x)</button>
+            <button type="button" class="btn" id="start-mic-record-btn">Cek Suara via Mikrofon</button>
+          </div>
+
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-hairline);">
+            <label for="manual-speech-input" class="control-label" style="display:block; margin-bottom:6px;">
+              Hasil tangkapan mikrofon atau ketik kalimat yang kamu ucapkan:
+            </label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <input type="text" id="manual-speech-input" class="text-input" style="flex:1; min-width: 220px;" placeholder="Hasil mikrofon akan muncul di sini atau ketik manual...">
+              <button type="button" class="btn btn-primary" id="evaluate-speech-btn">Periksa Kecocokan</button>
+            </div>
+            <div id="speech-evaluation-result" aria-live="polite" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h2 class="panel-card-title">Satu Kalimat, Tujuh Makna Berbeda</h2>
+          </div>
+          <p style="font-size: 0.94rem; color: var(--text-secondary); margin-bottom: 12px;">
+            Klik salah satu kata di bawah ini untuk memberi tekanan suara pada kata tersebut dan lihat bagaimana maksud kalimatnya bergeser:
+          </p>
+
+          <div class="prosody-word-bar" id="prosody-word-buttons" role="group" aria-label="Pilih Kata yang Diberi Tekanan Intonasi"></div>
+
+          <div id="prosody-explanation-box" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Laboratorium Intonasi: 4 Pola Nada Suara Internasional -->
+      <div class="panel-card" style="margin-top: 24px;">
+        <div class="panel-card-header">
+          <h2 class="panel-card-title">Laboratorium Intonasi: 4 Pola Nada Suara Internasional</h2>
+          <span class="tag-mono">Pitch Contours &amp; Pragmatics</span>
+        </div>
+        <p class="fine-print" style="margin-bottom: 16px;">
+          Penutur asli bahasa Inggris menggunakan pola naik-turun nada suara (intonation pitch contours) untuk membedakan kepastian, keraguan, pertanyaan ramah, dan kejutan. Dengarkan dan latih 4 kontur nada kunci ini:
+        </p>
+        <div id="intonation-contours-grid" class="intonation-grid" role="region" aria-label="Laboratorium Intonasi Suara"></div>
+      </div>
+    </section>
+
+    <!-- MODULE: UJI LEVEL & SUSUN KALIMAT -->
+    <section id="panel-diagnostic" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-diagnostic">
+      <div class="section-header-clean">
+        <h2 class="section-title">Uji Level &amp; Latihan Menyusun Kalimat</h2>
+        <p class="section-subtitle">
+          Jawab 12 soal bertingkat untuk melihat perkiraan level CEFR kamu saat ini, lalu latih ketepatan urutan kata bahasa Inggris di kolom sebelah kanan.
+        </p>
+      </div>
+
+      <div class="curriculum-grid">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h2 class="panel-card-title">Uji Level (12 Soal)</h2>
+            <span class="tag-mono" id="quiz-progress-badge">Soal 1 dari 12</span>
+          </div>
+          <div id="diagnostic-quiz-container" aria-live="polite"></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h2 class="panel-card-title">Latihan Menyusun Urutan Kata</h2>
+            <span class="tag-mono" id="surgery-level-badge">Level A1</span>
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label for="surgery-challenge-select" class="control-label" style="display:block; margin-bottom:6px;">Pilih kalimat:</label>
+            <select id="surgery-challenge-select" class="select-input" style="width:100%;"></select>
+          </div>
+          <div id="sentence-surgery-container" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE: PENERJEMAH PIKIRAN (INDONESIAN THOUGHT TO NATIVE) -->
+    <section id="panel-translate" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-translate">
+      <div class="section-header-clean">
+        <h2 class="section-title">Penerjemah Pikiran: Indonesia ke Native English</h2>
+        <p class="section-subtitle">
+          Ubah kebiasaan menerjemahkan kata-per-kata yang kaku menjadi ungkapan alami setara penutur asli. Bandingkan 5 tingkatan keluwesan (A2 sampai C2), gaya bahasa formal vs santai, dan bedah nuansa kosakata.
+        </p>
+      </div>
+      <div id="translate-root"></div>
+    </section>
+
+    <!-- MODULE: 50 TOPIK IELTS & TOEFL STUDIO -->
+    <section id="panel-topics" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-topics">
+      <div class="section-header-clean">
+        <h2 class="section-title">50 Topik Lengkap IELTS Speaking &amp; TOEFL iBT</h2>
+        <p class="section-subtitle">
+          Materi latihan komprehensif berstandar internasional: Islam &amp; Syariah, Finansial, Investasi, Geopolitik Global, AI, Ekspor-Impor, Regulasi, Hadis &amp; Ulama, Inflasi, Lingkungan, Sejarah, Perang, dan Ketahanan Mental.
+        </p>
+      </div>
+      <div id="topics-root"></div>
+    </section>
+
+    <!-- MODULE: PERCAKAPAN SEHARI-HARI & BISNIS -->
+    <section id="panel-conversation" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-conversation">
+      <div class="section-header-clean">
+        <h2 class="section-title">Percakapan Sehari-hari &amp; Bisnis (Mudah, Menengah, Advance)</h2>
+        <p class="section-subtitle">
+          Latihan dialog nyata untuk menanyakan kabar harian, membandingkan kehidupan di sini vs di negara mitra, mengecek kesiapan dokumen regulasi, menyiapkan agenda bisnis serta kunjungan Jakarta, dan studio balasan email maupun WhatsApp.
+        </p>
+      </div>
+      <div id="conversation-root"></div>
+    </section>
+  </main>
+
+  <!-- MODAL: RINGKASAN PROGRES & JADWAL HARIAN -->
+  <div class="modal-backdrop" id="protocol-modal" role="dialog" aria-modal="true" aria-labelledby="protocol-modal-title">
+    <div class="modal-card">
+      <div class="panel-card-header">
+        <h2 class="panel-card-title" id="protocol-modal-title">Ringkasan Progres &amp; Rutinitas 30 Menit</h2>
+        <button type="button" class="btn" id="close-protocol-modal-btn" aria-label="Tutup jendela ringkasan">Tutup</button>
+      </div>
+      <div style="font-size: 0.94rem; display: flex; flex-direction: column; gap: 14px;">
+        <div class="ledger-modal-grid" aria-label="Ringkasan Aktivitas Belajar">
+          <div class="ledger-item">
+            <span class="ledger-label">Perkiraan Level CEFR</span>
+            <span class="ledger-value" id="ledger-cefr-badge">Belum diuji</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">Kartu Kosakata</span>
+            <span class="ledger-value" id="ledger-srs-count">Belum ada kartu diulas</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">Uji Level</span>
+            <span class="ledger-value" id="ledger-quiz-score">Belum dikerjakan</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">Susun Kalimat</span>
+            <span class="ledger-value" id="ledger-surgery-count">Belum dimulai</span>
+          </div>
+        </div>
+
+        <p style="color:var(--text-secondary);">
+          Saran pembagian waktu latihan 30 menit sehari:
+        </p>
+        <div class="formula-item" style="margin-bottom:0;">
+          <strong>1. Menit 1 sampai 10: Rekam atau ketik di Coach</strong>
+          <p style="margin-top:4px; color:var(--text-secondary);">
+            Ceritakan kegiatan atau pekerjaan hari ini selama 1 sampai 2 menit, periksa koreksinya, dan baca keras versi kalimat Band 7.5+.
+          </p>
+        </div>
+        <div class="formula-item" style="margin-bottom:0;">
+          <strong>2. Menit 10 sampai 20: Peta Jalan Harian &amp; Kartu Kosakata</strong>
+          <p style="margin-top:4px; color:var(--text-secondary);">
+            Selesaikan target hari ini di Peta Jalan Harian dan ulas 5 sampai 10 kartu kosakata.
+          </p>
+        </div>
+        <div class="formula-item" style="margin-bottom:0;">
+          <strong>3. Menit 20 sampai 30: Latihan Tenses atau Pelafalan</strong>
+          <p style="margin-top:4px; color:var(--text-secondary);">
+            Ubah satu kalimat ke bentuk positif, negatif, dan tanya di 12 Tenses, atau tirukan intonasi kalimat di tab Pelafalan.
+          </p>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding-top:12px; border-top:1px solid var(--border-hairline); flex-wrap:wrap;">
+          <button type="button" class="btn" id="reset-all-progress-btn">Hapus Catatan Belajar</button>
+          <button type="button" class="btn btn-primary" id="confirm-protocol-modal-btn">Lanjut Belajar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div>
+        <strong>Jago English</strong> · Ruang latihan bahasa Inggris untuk penutur Indonesia.
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a href="#main-workbench" class="btn" id="footer-top-btn">Kembali ke Atas</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="curriculum-data.js"></script>
+  <script src="vocab-bank-1.js"></script>
+  <script src="vocab-bank-2.js"></script>
+  <script src="translate-data.js"></script>
+  <script src="topics-data-1.js"></script>
+  <script src="topics-data-2.js"></script>
+  <script src="conversation-data.js"></script>
+  <script src="speech-engine.js"></script>
+  <script src="app.js"></script>
+  <script src="coach-data.js"></script>
+  <script src="coach-core.js"></script>
+  <script src="coach.js"></script>
+  <script src="translate.js"></script>
+  <script src="topics.js"></script>
+  <script src="conversation.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./sw.js").catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
