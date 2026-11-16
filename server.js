@@ -83,6 +83,7 @@ function getVersionHash() {
     "topics-data-2.js",
     "conversation-data.js",
     "speech-engine.js",
+    "ai-engine.js",
     "translate.js",
     "topics.js",
     "conversation.js",

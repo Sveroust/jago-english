@@ -289,16 +289,110 @@
     }
   }
 
-  // Primary Tab Navigation
-  function switchTab(tabId) {
-    state.activeTab = tabId;
-    var activeTabBtn = null;
-    var tabButtons = document.querySelectorAll(".nav-tab");
-    tabButtons.forEach(function (btn) {
-      var isTarget = btn.getAttribute("data-tab") === tabId;
-      btn.setAttribute("aria-selected", isTarget ? "true" : "false");
-      if (isTarget) activeTabBtn = btn;
+  var TAB_TO_HUB = {
+    coach: "studio",
+    translate: "studio",
+    conversation: "convo",
+    topics: "convo",
+    speaking: "convo",
+    tenses: "grammar",
+    srs: "grammar",
+    curriculum: "grammar",
+    diagnostic: "grammar",
+    "ai-settings": "progress"
+  };
+
+  var HUB_DEFAULT_TAB = {
+    studio: "coach",
+    convo: "conversation",
+    grammar: "tenses",
+    progress: "plan"
+  };
+
+  function updateStudioAiBadge() {
+    var badge = document.getElementById("studio-ai-badge");
+    if (!badge || !window.JagoAI) return;
+    var info = window.JagoAI.getActiveTierInfo();
+    badge.textContent = info.label;
+    badge.classList.toggle("is-cloud-active", Boolean(info.isCloudKey));
+  }
+
+  function syncHubUi(hubId, subTabId) {
+    document.querySelectorAll(".nav-tab[data-hub]").forEach(function (btn) {
+      var isHub = btn.getAttribute("data-hub") === hubId;
+      btn.setAttribute("aria-selected", isHub ? "true" : "false");
+      if (isHub && window.innerWidth <= 640 && typeof btn.scrollIntoView === "function") {
+        try { btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); } catch (_) {}
+      }
     });
+
+    document.querySelectorAll(".hub-subbar").forEach(function (bar) {
+      var targetBarId = "subbar-" + hubId;
+      bar.classList.toggle("is-active", bar.id === targetBarId);
+    });
+
+    document.querySelectorAll(".studio-mode-btn, .hub-subpill").forEach(function (btn) {
+      var dt = btn.getAttribute("data-tab");
+      var dp = btn.getAttribute("data-progress-sub");
+      var active = false;
+      if (hubId === "progress" && subTabId && subTabId !== "ai-settings") {
+        active = dp === subTabId || (subTabId === "rubric" && dp === "tracker");
+      } else {
+        active = dt === subTabId;
+      }
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      if (btn.hasAttribute("aria-selected")) {
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      }
+      btn.classList.toggle("is-active", active);
+      if (btn.classList.contains("hub-subpill")) {
+        btn.classList.toggle("btn-primary", active);
+      }
+    });
+  }
+
+  function switchHub(hubId) {
+    state.activeHub = hubId;
+    if (hubId === "progress") {
+      if (state.activeTab === "ai-settings") {
+        switchTab("ai-settings");
+      } else {
+        var coachSub = window.JagoCoachGetSub ? window.JagoCoachGetSub() : "plan";
+        if (coachSub === "analyze") coachSub = "plan";
+        if (window.JagoCoachSetSub) window.JagoCoachSetSub(coachSub);
+        switchTab("coach", "progress", coachSub);
+      }
+      return;
+    }
+    var lastForHub = (state.hubTabs && state.hubTabs[hubId]) || HUB_DEFAULT_TAB[hubId] || "coach";
+    if (hubId === "studio" && lastForHub === "coach" && window.JagoCoachSetSub) {
+      window.JagoCoachSetSub("analyze");
+    }
+    switchTab(lastForHub, hubId);
+  }
+
+  // Primary Tab Navigation (4 Hubs + Grouped Sub-Views)
+  function switchTab(tabId, forcedHub, progressSub) {
+    var hubId = forcedHub || TAB_TO_HUB[tabId] || "studio";
+    if (!forcedHub && tabId === "coach" && window.JagoCoachGetSub) {
+      var curSub = window.JagoCoachGetSub();
+      if (curSub && curSub !== "analyze") {
+        hubId = "progress";
+        progressSub = curSub;
+      }
+    }
+    if (hubId === "studio" && tabId === "coach" && !progressSub && window.JagoCoachSetSub) {
+      window.JagoCoachSetSub("analyze");
+    }
+
+    state.activeHub = hubId;
+    state.activeTab = tabId;
+    state.hubTabs = state.hubTabs || {};
+    if (hubId !== "progress") {
+      state.hubTabs[hubId] = tabId;
+    }
+
+    syncHubUi(hubId, progressSub || tabId);
 
     var panels = document.querySelectorAll(".module-panel");
     panels.forEach(function (panel) {
@@ -309,13 +403,76 @@
       }
     });
 
-    if (activeTabBtn && window.innerWidth <= 640 && typeof activeTabBtn.scrollIntoView === "function") {
-      try {
-        activeTabBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      } catch (_) {}
+    if (tabId === "ai-settings") {
+      renderAiSettingsModule();
     }
 
     saveState();
+  }
+
+  window.JagoSwitchTab = switchTab;
+  window.JagoSwitchHub = switchHub;
+  window.JagoRefreshAiBadge = updateStudioAiBadge;
+
+  function renderAiSettingsModule() {
+    var rootEl = document.getElementById("ai-settings-root");
+    if (!rootEl) return;
+    var cfg = window.JagoAI ? window.JagoAI.loadConfig() : {
+      provider: "auto", geminiKey: "", geminiModel: "gemini-2.5-flash",
+      groqKey: "", groqModel: "llama-3.3-70b-versatile", useGroqWhisper: false
+    };
+    var info = window.JagoAI ? window.JagoAI.getActiveTierInfo() : { label: "Mode Gratis Online" };
+
+    rootEl.innerHTML = '' +
+      '<div class="panel-card">' +
+      '<div class="panel-card-header">' +
+      '<h3 class="panel-card-title">Status Otak AI Saat Ini</h3>' +
+      '<span class="tag-mono">' + escapeHtml(info.label) + '</span>' +
+      '</div>' +
+      '<p class="fine-print"><strong>Privasi terjamin:</strong> API Key hanya tersimpan di memori browser HP atau laptop kamu (<code>localStorage</code>) dan terhubung langsung ke server resmi Google Gemini / Groq melalui HTTPS. Tidak pernah dikirim ke server pihak ketiga mana pun.</p>' +
+      '<div class="ai-settings-grid">' +
+      '<div>' +
+      '<label for="ai-provider-select" class="control-label" style="display:block;margin-bottom:6px;">Prioritas Mode Pemrosesan</label>' +
+      '<select id="ai-provider-select" class="select-input" style="width:100%;">' +
+      '<option value="auto"' + (cfg.provider === "auto" ? " selected" : "") + '>Otomatis (Pakai Groq / Gemini jika ada key, lalu Gratis Online)</option>' +
+      '<option value="gemini"' + (cfg.provider === "gemini" ? " selected" : "") + '>Prioritaskan Google Gemini (API Key)</option>' +
+      '<option value="groq"' + (cfg.provider === "groq" ? " selected" : "") + '>Prioritaskan Groq Cloud (API Key)</option>' +
+      '<option value="free"' + (cfg.provider === "free" ? " selected" : "") + '>Hanya Mode Gratis Bawaan (LanguageTool + MyMemory)</option>' +
+      '<option value="local"' + (cfg.provider === "local" ? " selected" : "") + '>Server Laptop Lokal (hanya saat buka localhost Mac)</option>' +
+      '</select>' +
+      '</div>' +
+      '<div>' +
+      '<label for="ai-gemini-model" class="control-label" style="display:block;margin-bottom:6px;">Model Google Gemini</label>' +
+      '<select id="ai-gemini-model" class="select-input" style="width:100%;">' +
+      '<option value="gemini-2.5-flash"' + (cfg.geminiModel === "gemini-2.5-flash" ? " selected" : "") + '>gemini-2.5-flash (Cepat &amp; Kuota Gratis Besar)</option>' +
+      '<option value="gemini-2.0-flash"' + (cfg.geminiModel === "gemini-2.0-flash" ? " selected" : "") + '>gemini-2.0-flash (Alternatif Stabil)</option>' +
+      '</select>' +
+      '</div>' +
+      '</div>' +
+      '<div class="ai-key-box">' +
+      '<div class="panel-card-header"><h4 style="font-size:1rem;font-weight:800;">Opsi 1: Google Gemini API Key (Gratis via Google AI Studio)</h4><a class="btn btn-compact" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Ambil Key Gratis</a></div>' +
+      '<p class="fine-print">Buka aistudio.google.com/apikey dengan akun Google, klik <strong>Create API Key</strong>, lalu tempel di bawah ini. Langsung aktif di HP kapan saja.</p>' +
+      '<div class="control-group" style="margin-top:8px;">' +
+      '<input type="password" id="ai-gemini-key" class="text-input" style="flex:1;min-width:200px;" placeholder="Tempel AIzaSy... di sini" value="' + escapeHtml(cfg.geminiKey || "") + '">' +
+      '<button type="button" class="btn" data-toggle-secret="ai-gemini-key">Lihat</button>' +
+      '</div>' +
+      '</div>' +
+      '<div class="ai-key-box">' +
+      '<div class="panel-card-header"><h4 style="font-size:1rem;font-weight:800;">Opsi 2: Groq Cloud API Key (Gratis + Bonus Whisper Suara di HP)</h4><a class="btn btn-compact" href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Ambil Key Gratis</a></div>' +
+      '<p class="fine-print">Groq super cepat dengan kuota gratis harian besar, dan bisa menangkap dikte suara campuran Indonesia + Inggris langsung dari HP.</p>' +
+      '<div class="control-group" style="margin-top:8px;">' +
+      '<input type="password" id="ai-groq-key" class="text-input" style="flex:1;min-width:200px;" placeholder="Tempel gsk_... di sini" value="' + escapeHtml(cfg.groqKey || "") + '">' +
+      '<button type="button" class="btn" data-toggle-secret="ai-groq-key">Lihat</button>' +
+      '</div>' +
+      '<label class="check-row" style="margin-top:10px;"><input type="checkbox" id="ai-groq-whisper-toggle"' + (cfg.useGroqWhisper ? " checked" : "") + '><span>Gunakan Groq Whisper untuk rekam suara mikrofon saat online di HP</span></label>' +
+      '</div>' +
+      '<div class="control-group" style="margin-top:16px;">' +
+      '<button type="button" class="btn btn-primary" id="ai-save-cfg-btn">Simpan Pengaturan</button>' +
+      '<button type="button" class="btn" id="ai-test-conn-btn">Tes Koneksi AI Sekarang</button>' +
+      '<button type="button" class="btn" id="ai-clear-keys-btn">Hapus Key Tersimpan</button>' +
+      '</div>' +
+      '<div id="ai-settings-feedback" aria-live="polite" style="margin-top:12px;"></div>' +
+      '</div>';
   }
 
   // MODULE 1: CEFR A1-C2 Curriculum
@@ -1708,12 +1865,108 @@
       });
     }
 
-    document.querySelectorAll(".nav-tab").forEach(function (tabBtn) {
-      tabBtn.addEventListener("click", function () {
-        var tabId = tabBtn.getAttribute("data-tab");
-        switchTab(tabId);
+    document.querySelectorAll(".nav-tab[data-hub]").forEach(function (hubBtn) {
+      hubBtn.addEventListener("click", function () {
+        switchHub(hubBtn.getAttribute("data-hub"));
       });
     });
+
+    document.querySelectorAll(".studio-mode-btn[data-tab], .hub-subpill[data-tab]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        switchTab(btn.getAttribute("data-tab"));
+      });
+    });
+
+    document.querySelectorAll(".hub-subpill[data-progress-sub]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var sub = btn.getAttribute("data-progress-sub");
+        if (window.JagoCoachSetSub) window.JagoCoachSetSub(sub);
+        switchTab("coach", "progress", sub);
+      });
+    });
+
+    var guideBtn = document.getElementById("studio-guide-toggle-btn");
+    var guideBox = document.getElementById("studio-quick-tutorial");
+    if (guideBtn && guideBox) {
+      var storedOpen = window.localStorage.getItem("jago_studio_guide_open");
+      var isOpen = storedOpen !== "0";
+      guideBox.style.display = isOpen ? "" : "none";
+      guideBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      guideBtn.textContent = isOpen ? "Sembunyikan Cara Pakai" : "Cara Pakai 30 Detik";
+      guideBtn.addEventListener("click", function () {
+        var nowOpen = guideBox.style.display === "none";
+        guideBox.style.display = nowOpen ? "" : "none";
+        guideBtn.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+        guideBtn.textContent = nowOpen ? "Sembunyikan Cara Pakai" : "Cara Pakai 30 Detik";
+        try { window.localStorage.setItem("jago_studio_guide_open", nowOpen ? "1" : "0"); } catch (_) {}
+      });
+    }
+
+    var aiJump = document.getElementById("studio-ai-settings-jump");
+    if (aiJump) {
+      aiJump.addEventListener("click", function () {
+        switchTab("ai-settings", "progress", "ai-settings");
+      });
+    }
+
+    var aiSettingsRoot = document.getElementById("ai-settings-root");
+    if (aiSettingsRoot) {
+      aiSettingsRoot.addEventListener("click", function (e) {
+        var t = e.target;
+        var toggleId = t.getAttribute && t.getAttribute("data-toggle-secret");
+        if (toggleId) {
+          var inp = document.getElementById(toggleId);
+          if (inp) {
+            inp.type = inp.type === "password" ? "text" : "password";
+            t.textContent = inp.type === "password" ? "Lihat" : "Sembunyikan";
+          }
+          return;
+        }
+        if (t.id === "ai-save-cfg-btn" && window.JagoAI) {
+          window.JagoAI.saveConfig({
+            provider: (document.getElementById("ai-provider-select") || {}).value || "auto",
+            geminiModel: (document.getElementById("ai-gemini-model") || {}).value || "gemini-2.5-flash",
+            geminiKey: ((document.getElementById("ai-gemini-key") || {}).value || "").trim(),
+            groqKey: ((document.getElementById("ai-groq-key") || {}).value || "").trim(),
+            useGroqWhisper: Boolean((document.getElementById("ai-groq-whisper-toggle") || {}).checked)
+          });
+          updateStudioAiBadge();
+          renderAiSettingsModule();
+          var fbSave = document.getElementById("ai-settings-feedback");
+          if (fbSave) fbSave.innerHTML = '<div class="state-banner is-success"><strong>Pengaturan tersimpan di browser perangkat ini.</strong></div>';
+        } else if (t.id === "ai-clear-keys-btn" && window.JagoAI) {
+          window.JagoAI.saveConfig({ provider: "auto", geminiKey: "", groqKey: "", useGroqWhisper: false });
+          updateStudioAiBadge();
+          renderAiSettingsModule();
+          var fbClr = document.getElementById("ai-settings-feedback");
+          if (fbClr) fbClr.innerHTML = '<div class="state-banner">API Key dihapus. Aplikasi berjalan dalam Mode Gratis Bawaan.</div>';
+        } else if (t.id === "ai-test-conn-btn" && window.JagoAI) {
+          window.JagoAI.saveConfig({
+            provider: (document.getElementById("ai-provider-select") || {}).value || "auto",
+            geminiModel: (document.getElementById("ai-gemini-model") || {}).value || "gemini-2.5-flash",
+            geminiKey: ((document.getElementById("ai-gemini-key") || {}).value || "").trim(),
+            groqKey: ((document.getElementById("ai-groq-key") || {}).value || "").trim(),
+            useGroqWhisper: Boolean((document.getElementById("ai-groq-whisper-toggle") || {}).checked)
+          });
+          updateStudioAiBadge();
+          var fbTest = document.getElementById("ai-settings-feedback");
+          if (fbTest) fbTest.innerHTML = '<div class="state-banner">Menguji koneksi layanan AI...</div>';
+          var provSel = (document.getElementById("ai-provider-select") || {}).value || "auto";
+          var testProv = provSel === "auto"
+            ? (window.JagoAI.loadConfig().groqKey ? "groq" : (window.JagoAI.loadConfig().geminiKey ? "gemini" : "free"))
+            : provSel;
+          window.JagoAI.testConnection(testProv).then(function (res) {
+            if (fbTest) {
+              fbTest.innerHTML = '<div class="state-banner is-success"><strong>Terhubung (' + escapeHtml(res.source) + '):</strong> ' + escapeHtml((res.data && res.data.msg) || "Siap digunakan!") + '</div>';
+            }
+          }).catch(function (err) {
+            if (fbTest) {
+              fbTest.innerHTML = '<div class="state-banner is-error" role="alert"><strong>Koneksi gagal:</strong> ' + escapeHtml(err && err.message ? err.message : "Periksa API Key atau koneksi internetmu.") + '</div>';
+            }
+          });
+        }
+      });
+    }
 
     // Tense Matrix controls
     var propSelect = document.getElementById("tense-prop-select");
@@ -2028,8 +2281,10 @@
 
   function renderAll() {
     applyTheme();
+    updateStudioAiBadge();
     updateLedgerStrip();
     switchTab(state.activeTab);
+    renderAiSettingsModule();
     renderCurriculumModule();
     renderTenseMatrixModule();
     renderSrsModule();

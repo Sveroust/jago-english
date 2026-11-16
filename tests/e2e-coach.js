@@ -20,6 +20,7 @@ function ok(name, cond, extra) {
   await page.reload();
 
   // Overflow at three breakpoints on the coach tab
+  await page.click("#tab-hub-studio");
   await page.click("#tab-btn-coach");
   const pageTextInitial = await page.textContent("body");
   ok("pure Lato font family active on body", await page.evaluate(() => getComputedStyle(document.body).fontFamily.includes("Lato")));
@@ -35,7 +36,7 @@ function ok(name, cond, extra) {
   await page.click('[data-action="analyze"]');
   ok("empty input shows error state", (await page.textContent("#coach-results")).includes("Teks masih kosong"));
 
-  // Sample: Indonesia intro
+  // Sample: Indonesia intro (mock external calls clean on test if needed or allow network)
   await page.click('[data-action="sample"][data-sample="indonesia"]');
   const res = await page.textContent("#coach-results");
   ok("analysis shows corrected text", res.includes("proud of Indonesia"));
@@ -70,8 +71,9 @@ function ok(name, cond, extra) {
   await page.locator('[data-action="readaloud"]').first().click();
   ok("read-aloud click yields feedback", (await page.locator("#coach-readaloud-0").innerHTML()).length > 0);
 
-  // Notebook
-  await page.click('[data-action="sub"][data-sub="notebook"]');
+  // Notebook (via Hub 4 Progress)
+  await page.click("#tab-hub-progress");
+  await page.click("#tab-btn-progress-notebook");
   ok("notebook table lists recorded patterns", (await page.textContent("#coach-error-table")).includes("proud") || (await page.textContent("#coach-error-table")).includes("what we"));
   ok("drill rendered", await page.locator('[data-action="drill"]').count() === 2);
   const rightBtn = page.locator('[data-action="drill"][data-pick="right"]');
@@ -81,7 +83,7 @@ function ok(name, cond, extra) {
   ok("next drill renders", await page.locator('[data-action="drill"]').count() === 2);
 
   // Plan & Winding Highway Road Map
-  await page.click('[data-action="sub"][data-sub="plan"]');
+  await page.click("#tab-btn-progress-plan");
   ok("winding roadmap highway renders 14 daily stops", (await page.locator("#coach-roadmap-highway .road-stop").count()) === 14);
   ok("roadmap finish badge rendered", (await page.textContent("#coach-roadmap-highway")).includes("DONE:"));
   const roadTaskBox = page.locator('input[data-action="road-task"]').first();
@@ -113,7 +115,7 @@ function ok(name, cond, extra) {
   ok("plan checkbox persists", await page.locator('input[data-action="plan"]').first().isChecked());
 
   // Tracker validation + readiness
-  await page.click('[data-action="sub"][data-sub="tracker"]');
+  await page.click("#tab-btn-progress-tracker");
   await page.click('#coach-score-form button[type="submit"]');
   ok("tracker validation error", (await page.textContent("#coach-score-feedback")).includes("Overall wajib"));
   for (const [d, s] of [["2026-10-01", "7"], ["2026-10-15", "7.5"], ["2026-10-29", "7.5"]]) {
@@ -141,13 +143,14 @@ function ok(name, cond, extra) {
 
   // Persistence across reload
   await page.reload();
-  await page.click("#tab-btn-coach");
+  await page.click("#tab-hub-progress");
   ok("state persisted across reload (tracker section)", (await page.textContent("#coach-root")).length > 100);
 
   // Dark theme + mobile layout
   await page.click("#theme-toggle-btn");
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.click('[data-action="sub"][data-sub="analyze"]');
+  await page.click("#tab-hub-studio");
+  await page.click("#tab-btn-coach");
   await page.click('[data-action="sample"][data-sample="alkes"]');
   const over360 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   ok("no horizontal overflow at 360px with results (dark)", !over360);

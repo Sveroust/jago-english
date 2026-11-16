@@ -43,60 +43,97 @@
   <nav class="primary-nav" aria-label="Menu Utama">
     <ul class="nav-list" role="tablist">
       <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-coach" aria-selected="true" aria-controls="panel-coach" data-tab="coach">
-          <span>Coach &amp; Peta Harian</span>
+        <button type="button" role="tab" class="nav-tab" id="tab-hub-studio" aria-selected="true" data-hub="studio">
+          <span>Studio Dua Arah</span>
         </button>
       </li>
       <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-curriculum" aria-selected="false" aria-controls="panel-curriculum" data-tab="curriculum">
-          <span>Kurikulum A1-C2</span>
+        <button type="button" role="tab" class="nav-tab" id="tab-hub-convo" aria-selected="false" data-hub="convo">
+          <span>Percakapan &amp; Topik</span>
         </button>
       </li>
       <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-tenses" aria-selected="false" aria-controls="panel-tenses" data-tab="tenses">
-          <span>12 Tenses</span>
+        <button type="button" role="tab" class="nav-tab" id="tab-hub-grammar" aria-selected="false" data-hub="grammar">
+          <span>Pondasi &amp; Kosakata</span>
         </button>
       </li>
       <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-srs" aria-selected="false" aria-controls="panel-srs" data-tab="srs">
-          <span>Kartu Kosakata</span>
-        </button>
-      </li>
-      <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-speaking" aria-selected="false" aria-controls="panel-speaking" data-tab="speaking">
-          <span>Pelafalan &amp; Intonasi</span>
-        </button>
-      </li>
-      <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-diagnostic" aria-selected="false" aria-controls="panel-diagnostic" data-tab="diagnostic">
-          <span>Uji Level &amp; Susun Kalimat</span>
-        </button>
-      </li>
-      <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-translate" aria-selected="false" aria-controls="panel-translate" data-tab="translate">
-          <span>Penerjemah Pikiran</span>
-        </button>
-      </li>
-      <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-topics" aria-selected="false" aria-controls="panel-topics" data-tab="topics">
-          <span>50 Topik IELTS &amp; TOEFL</span>
-        </button>
-      </li>
-      <li role="presentation">
-        <button type="button" role="tab" class="nav-tab" id="tab-btn-conversation" aria-selected="false" aria-controls="panel-conversation" data-tab="conversation">
-          <span>Percakapan Harian &amp; Bisnis</span>
+        <button type="button" role="tab" class="nav-tab" id="tab-hub-progress" aria-selected="false" data-hub="progress">
+          <span>Peta &amp; AI Online</span>
         </button>
       </li>
     </ul>
   </nav>
 
   <main id="main-workbench" class="workbench-main" tabindex="-1">
+    <!-- HUB 1 CONTROL BAR: STUDIO DUA ARAH -->
+    <div id="subbar-studio" class="hub-subbar is-active" role="region" aria-label="Studio Latihan Dua Arah">
+      <div class="studio-top-meta">
+        <div class="studio-status-left">
+          <span class="tag-mono" id="studio-ai-badge">Mode Gratis Online (Tanpa Key)</span>
+          <button type="button" class="btn btn-compact" id="studio-ai-settings-jump">Atur AI HP</button>
+        </div>
+        <button type="button" class="btn btn-compact" id="studio-guide-toggle-btn" aria-expanded="true">Sembunyikan Cara Pakai</button>
+      </div>
+
+      <div id="studio-quick-tutorial" class="studio-tutorial-box">
+        <div class="studio-tutorial-item">
+          <span class="quick-guide-num">A</span>
+          <div>
+            <strong>Bicara / Tulis Inggris dulu?</strong>
+            <p class="fine-print">Pilih <strong>A. Cek Inggris Saya</strong> di bawah. Pakai template (boleh ubah sesuka hati) atau rekam suara bebas. Sistem langsung menilai levelmu, menerjemahkan maksudnya ke bahasa Indonesia, mengoreksi grammar, dan menyiapkan versi santai sampai eksekutif.</p>
+          </div>
+        </div>
+        <div class="studio-tutorial-item">
+          <span class="quick-guide-num">B</span>
+          <div>
+            <strong>Hanya tahu bahasa Indonesianya dulu?</strong>
+            <p class="fine-print">Pilih <strong>B. Indonesia ke Inggris</strong>. Bicara bebas apa adanya dalam bahasa Indonesia. Sistem mengubah ke Inggris per tingkatan (Santai, Kerja, Eksekutif Band 7.5+) lengkap dengan arti baliknya dan tombol untuk langsung tes ucapkan.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="studio-mode-switcher" role="group" aria-label="Pilih Arah Latihan">
+        <button type="button" class="studio-mode-btn is-active" id="tab-btn-coach" data-tab="coach" aria-pressed="true">
+          <strong>A. Cek Inggris Saya</strong>
+          <span>Koreksi grammar, skor level, arti ke Indonesia &amp; versi bener bertingkat</span>
+        </button>
+        <button type="button" class="studio-mode-btn" id="tab-btn-translate" data-tab="translate" aria-pressed="false">
+          <strong>B. Indonesia ke Inggris</strong>
+          <span>Ngomong Indonesia bebas &rarr; Inggris bertingkat + arti balik &amp; maksud</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- HUB 2 SUB-BAR: PERCAKAPAN & TOPIK -->
+    <div id="subbar-convo" class="hub-subbar" role="group" aria-label="Menu Percakapan dan Topik">
+      <button type="button" class="btn hub-subpill" id="tab-btn-conversation" data-tab="conversation" aria-pressed="true">Percakapan Harian &amp; Bisnis</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-topics" data-tab="topics" aria-pressed="false">50 Topik IELTS &amp; TOEFL</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-speaking" data-tab="speaking" aria-pressed="false">Pelafalan &amp; Intonasi</button>
+    </div>
+
+    <!-- HUB 3 SUB-BAR: PONDASI & KOSAKATA -->
+    <div id="subbar-grammar" class="hub-subbar" role="group" aria-label="Menu Pondasi Bahasa dan Kosakata">
+      <button type="button" class="btn hub-subpill" id="tab-btn-tenses" data-tab="tenses" aria-pressed="true">Simulator 12 Tenses</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-srs" data-tab="srs" aria-pressed="false">Kartu Kosakata (120 Kata)</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-curriculum" data-tab="curriculum" aria-pressed="false">Kurikulum A1-C2</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-diagnostic" data-tab="diagnostic" aria-pressed="false">Uji Level &amp; Susun Kalimat</button>
+    </div>
+
+    <!-- HUB 4 SUB-BAR: PETA BELAJAR & PENGATURAN AI -->
+    <div id="subbar-progress" class="hub-subbar" role="group" aria-label="Menu Peta Belajar dan Pengaturan AI">
+      <button type="button" class="btn hub-subpill" id="tab-btn-progress-plan" data-progress-sub="plan" aria-pressed="true">Peta Harian 14 Hari</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-progress-notebook" data-progress-sub="notebook" aria-pressed="false">Catatan Salah &amp; Latihan</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-progress-tracker" data-progress-sub="tracker" aria-pressed="false">Target Skor &amp; Kriteria</button>
+      <button type="button" class="btn hub-subpill" id="tab-btn-ai-settings" data-tab="ai-settings" aria-pressed="false">Pengaturan AI Online (HP)</button>
+    </div>
+
     <!-- MODULE: COACH & PETA HARIAN -->
     <section id="panel-coach" class="module-panel is-active" role="tabpanel" aria-labelledby="tab-btn-coach">
       <div class="section-header-clean">
-        <h1 class="section-title">Latihan Bicara, Koreksi Kalimat, &amp; Peta Harian</h1>
-        <p class="section-subtitle">
-          Rekam suara atau ketik kalimatmu, lalu lihat bagian yang keliru, alasan perbaikannya, versi kalimat yang lebih luwes (setara Band 7.5+), serta cara membacanya dengan ejaan lidah Indonesia.
+        <h1 class="section-title" id="coach-section-heading">Cek Bahasa Inggris, Arti Indonesia, &amp; Perbaikan Standar Tinggi</h1>
+        <p class="section-subtitle" id="coach-section-subtitle">
+          Rekam suara atau ketik kalimatmu bebas (boleh campur sedikit kata Indonesia). Lihat arti maksud Inggrismu dalam bahasa Indonesia, perbaikan grammar berstandar tinggi, versi santai sampai eksekutif, dan tes pengucapanmu.
         </p>
       </div>
       <div id="coach-root"></div>
@@ -383,6 +420,17 @@
       </div>
       <div id="conversation-root"></div>
     </section>
+
+    <!-- MODULE: PENGATURAN AI ONLINE (HP & DESKTOP) -->
+    <section id="panel-ai-settings" class="module-panel" role="tabpanel" aria-labelledby="tab-btn-ai-settings">
+      <div class="section-header-clean">
+        <h2 class="section-title">Pengaturan Otak AI Online (Langsung di HP)</h2>
+        <p class="section-subtitle">
+          Secara bawaan website ini sudah berjalan gratis tanpa kunci apa pun menggunakan LanguageTool dan terjemahan publik. Jika ingin pemahaman kalimat bebas yang jauh lebih pintar saat diakses lewat HP (tanpa menyalakan laptop), kamu bisa menempelkan API Key gratis Google Gemini atau Groq satu kali di sini.
+        </p>
+      </div>
+      <div id="ai-settings-root"></div>
+    </section>
   </main>
 
   <!-- MODAL: RINGKASAN PROGRES & JADWAL HARIAN -->
@@ -460,6 +508,7 @@
   <script src="topics-data-2.js"></script>
   <script src="conversation-data.js"></script>
   <script src="speech-engine.js"></script>
+  <script src="ai-engine.js"></script>
   <script src="app.js"></script>
   <script src="coach-data.js"></script>
   <script src="coach-core.js"></script>

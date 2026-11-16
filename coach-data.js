@@ -880,7 +880,9 @@ window.COACH_DATA = (function () {
   var samples = [
     { id: "indonesia", label: "Perkenalan Indonesia", text: "Hello, my name is Kemal Thoriq. I'm 24 years old. Talking about Indonesia, Indonesia has several islands and tersebar in every like Java, Sumatra, Kalimantan, etc. We are proud about Indonesia because Indonesia has several culture, language, dialect, and acculturation of culture. So, we can choose anywhere we can live." },
     { id: "spices", label: "Pitching kemiri", text: "We supply Indonesian spices, especially what we called kemiri and stemless dried chili. Our kemiri has much moisture control and it depend of the harvest season. I very like to explain about our process because the buyer need more informations." },
-    { id: "alkes", label: "Regulasi alkes", text: "Now we discuss about regulation of alkes in Indonesia. We are processing IDAK and CDAKB. The process is more difficult than before, but she don't worry because we have submitted the dossier yesterday. We are confident that the Kemenkes will issue the license soon." }
+    { id: "alkes", label: "Regulasi alkes", text: "Now we discuss about regulation of alkes in Indonesia. We are processing IDAK and CDAKB. The process is more difficult than before, but she don't worry because we have submitted the dossier yesterday. We are confident that the Kemenkes will issue the license soon." },
+    { id: "daily-weather", label: "Sapaan Harian & Cuaca", text: "Good morning, how have you been keeping lately? In Jakarta today we have heavy rain and many traffic jam, so maybe I arrive little bit late to pick you up at airport." },
+    { id: "malik-welcome", label: "Sambut Tamu (Mr. Malik)", text: "Thank you for coming again in Indonesia Mr. Malik. We have a good news about our regulation. We are now in legal for business and currently we are preparing IDAK and CDAKB for Ministry of Health." }
   ];
 
   var roadmapTracks = {

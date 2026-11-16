@@ -311,20 +311,32 @@
     return '<span class="tag-mono">' + esc(text) + "</span>";
   }
 
+  function syncSectionHeader() {
+    var hEl = document.getElementById("coach-section-heading");
+    var subEl = document.getElementById("coach-section-subtitle");
+    if (!hEl || !subEl) return;
+    if (cs.sub === "analyze") {
+      hEl.textContent = "Cek Bahasa Inggris, Arti Indonesia, & Perbaikan Standar Tinggi";
+      subEl.textContent = "Rekam suara atau ketik kalimatmu bebas (boleh campur sedikit kata Indonesia). Lihat arti maksud Inggrismu dalam bahasa Indonesia, perbaikan grammar berstandar tinggi, versi santai sampai eksekutif, dan tes pengucapanmu.";
+    } else {
+      hEl.textContent = "Peta Belajar Harian, Catatan Kesalahan, & Target Skor";
+      subEl.textContent = "Pantau rutinitas harian 14 hari, ulas pola kesalahan grammar yang sering muncul lewat kuis cepat, dan simpan target skor ujianmu.";
+    }
+  }
+
   function subnavHtml() {
-    var items = [
-      ["analyze", "Bedah Kalimat & Suara"],
-      ["plan", "Peta Jalan Harian"],
-      ["notebook", "Catatan Kesalahan & Aturan Baru"],
-      ["tracker", "Catatan Skor Latihan"],
-      ["rubric", "Kriteria Penilaian"]
-    ];
-    return '<div class="coach-subnav" role="group" aria-label="Bagian Coach">' + items.map(function (it) {
-      return '<button type="button" class="btn' + (cs.sub === it[0] ? " btn-primary" : "") + '" data-action="sub" data-sub="' + it[0] + '" aria-pressed="' + (cs.sub === it[0]) + '">' + esc(it[1]) + "</button>";
-    }).join("") + "</div>";
+    if (cs.sub === "analyze") return "";
+    if (cs.sub === "tracker" || cs.sub === "rubric") {
+      return '<div class="coach-subnav" role="group" aria-label="Tampilan Skor dan Kriteria">' +
+        '<button type="button" class="btn' + (cs.sub === "tracker" ? " btn-primary" : "") + '" data-action="sub" data-sub="tracker" aria-pressed="' + (cs.sub === "tracker") + '">Catatan Skor Latihan</button>' +
+        '<button type="button" class="btn' + (cs.sub === "rubric" ? " btn-primary" : "") + '" data-action="sub" data-sub="rubric" aria-pressed="' + (cs.sub === "rubric") + '">Kriteria Penilaian IELTS/TOEFL</button>' +
+        "</div>";
+    }
+    return "";
   }
 
   function render() {
+    syncSectionHeader();
     var body = "";
     if (cs.sub === "analyze") body = analyzeShell();
     else if (cs.sub === "notebook") body = notebookHtml();
@@ -351,37 +363,43 @@
 
   function analyzeShell() {
     var samples = allSamples().map(function (s) {
-      return '<button type="button" class="btn" data-action="sample" data-sample="' + esc(s.id) + '">' + esc(s.label) + "</button>";
+      if (s.isCustom) {
+        return '<span class="tpl-chip-group">' +
+          '<button type="button" class="btn btn-compact" data-action="sample" data-sample="' + esc(s.id) + '">' + esc(s.label) + '</button>' +
+          '<button type="button" class="btn btn-compact tpl-del-btn" data-action="del-context" data-id="' + esc(s.id) + '" aria-label="Hapus template ' + esc(s.label) + '">&times;</button>' +
+          '</span>';
+      }
+      return '<button type="button" class="btn btn-compact" data-action="sample" data-sample="' + esc(s.id) + '">' + esc(s.label) + "</button>";
     }).join("");
     return '' +
       '<div class="panel-card">' +
-      '<div class="panel-card-header"><h2 class="panel-card-title">Masukkan Ucapan atau Tulisanmu</h2><span class="tag-mono">Cara pakai: 3 langkah</span></div>' +
-      '<div class="quick-guide-strip" aria-label="Petunjuk singkat penggunaan">' +
-      '<div class="quick-guide-step"><span class="quick-guide-num">1</span><strong class="quick-guide-title">Rekam atau Ketik Kalimatmu</strong><span class="quick-guide-desc">Boleh campur bahasa Indonesia jika ada kata Inggris yang belum tahu.</span></div>' +
-      '<div class="quick-guide-divider" aria-hidden="true">&rarr;</div>' +
-      '<div class="quick-guide-step"><span class="quick-guide-num">2</span><strong class="quick-guide-title">Klik Bedah Teks</strong><span class="quick-guide-desc">Lihat letak kesalahan, alasan perbaikan, serta versi kalimat Band 7.5+.</span></div>' +
-      '<div class="quick-guide-divider" aria-hidden="true">&rarr;</div>' +
-      '<div class="quick-guide-step"><span class="quick-guide-num">3</span><strong class="quick-guide-title">Dengar &amp; Tirukan Suaranya</strong><span class="quick-guide-desc">Ikuti ejaan baca lidah Indonesia lalu uji pelafalanmu lewat mikrofon.</span></div>' +
-      "</div>" +
-      '<p class="fine-print">Kalau ada kata bahasa Inggris yang lupa, tulis saja dalam bahasa Indonesia (misalnya <em>tersebar</em>, <em>sedang mengurus</em>, <em>kemiri</em>, atau <em>IDAK</em>) dan sistem akan mencarikan padanan yang tepat.</p>' +
+      '<div class="panel-card-header"><h2 class="panel-card-title">Template &amp; Masukan Kalimat Bahasa Inggris</h2><span class="tag-mono">Boleh Edit Bebas</span></div>' +
+      '<p class="fine-print">Pilih template siap pakai lalu ubah kata-katanya semaumu, atau langsung ketik dan rekam ucapan Inggrismu bebas (boleh campur istilah Indonesia seperti <em>IDAK</em>, <em>CDAKB</em>, atau <em>kemiri</em>):</p>' +
+      '<div class="tpl-chip-bar" role="group" aria-label="Template Latihan Bahasa Inggris">' + samples + '</div>' +
       '<div class="control-group" style="margin:12px 0;">' +
       '<label for="coach-lang" class="control-label">Bahasa mikrofon:</label>' +
       '<select id="coach-lang" class="select-input" data-action="lang"><option value="en-US"' + (cs.speechLang === "en-US" ? " selected" : "") + '>Inggris (en-US)</option><option value="id-ID"' + (cs.speechLang === "id-ID" ? " selected" : "") + '>Indonesia (id-ID)</option><option value="auto"' + (cs.speechLang === "auto" ? " selected" : "") + '>Campuran ID + EN (Otomatis)</option></select>' +
       '<button type="button" class="btn btn-primary" id="coach-dictate-btn" data-action="dictate" aria-pressed="false">Mulai Dikte</button>' +
       '<label class="check-row" style="margin-left:8px;"><input type="checkbox" data-action="toggle-lt"' + (cs.freeCloudCheck !== false ? " checked" : "") + '><span>Gunakan pemeriksa tata bahasa tambahan (LanguageTool)</span></label>' +
       "</div>" +
-      '<label for="coach-input" class="control-label" style="display:block;margin-bottom:6px;">Teks latihan:</label>' +
-      '<textarea id="coach-input" class="coach-textarea" rows="6" placeholder="Contoh: We supply what we called kemiri and I very like to explain about our process..."></textarea>' +
+      '<label for="coach-input" class="control-label" style="display:block;margin-bottom:6px;">Kalimat bahasa Inggris yang ingin dicek &amp; diartikan:</label>' +
+      '<textarea id="coach-input" class="coach-textarea" rows="5" placeholder="Ketik atau rekam Inggrismu bebas di sini... Contoh: Thank you for coming again in Indonesia Mr. Malik, we have a good news about IDAK regulation."></textarea>' +
       '<div id="coach-input-feedback" aria-live="polite"></div>' +
       '<div class="control-group" style="margin-top:12px;">' +
-      '<button type="button" class="btn btn-primary" data-action="analyze">Bedah Teks</button>' +
+      '<button type="button" class="btn btn-primary" data-action="analyze">Cek Grammar, Level &amp; Arti Indonesia</button>' +
+      '<button type="button" class="btn" id="coach-toggle-save-tpl-btn" data-action="toggle-save-tpl">+ Simpan Jadi Template</button>' +
       '<button type="button" class="btn" data-action="clear">Kosongkan</button>' +
-      '<span class="control-label">Contoh cepat:</span>' + samples +
       "</div>" +
+      '<div id="coach-save-tpl-bar" class="inline-save-bar" style="display:none;">' +
+      '<input type="text" id="coach-quick-tpl-label" class="text-input" placeholder="Nama template (mis. Update Izin ke Buyer)...">' +
+      '<button type="button" class="btn btn-primary" data-action="save-quick-tpl">Simpan Template</button>' +
+      '<button type="button" class="btn" data-action="cancel-quick-tpl">Batal</button>' +
+      '</div>' +
+      '<div id="coach-tpl-feedback" aria-live="polite"></div>' +
       "</div>" +
       '<div class="coach-audio-bar" style="flex-wrap:wrap; gap:10px;"><span class="control-label">Audio:</span><span id="coach-audio-status" class="status-chip" role="status">Siap diputar</span><button type="button" class="btn" data-action="stop">Hentikan Audio</button><div class="voice-select-wrap"><label for="coach-voice-select" class="control-label" style="margin-left:6px;">Suara Sistem:</label><select id="coach-voice-select" class="select-input" data-action="voice-select" style="max-width:240px;"></select><button type="button" class="btn" data-action="test-voice">Tes Suara</button></div></div>' +
       '<div id="coach-results" aria-live="polite">' +
-      '<div class="state-banner">Isi kotak teks di atas lalu klik <strong>Bedah Teks</strong> untuk melihat koreksi kalimat, versi yang lebih luwes (Band 7.5+), cara baca, serta saran kalimat lanjutan.</div>' +
+      '<div class="state-banner">Isi atau pilih template di atas lalu klik <strong>Cek Grammar, Level &amp; Arti Indonesia</strong> untuk melihat arti kalimatmu di telinga lawan bicara, perbaikan tata bahasa, dan versi bertingkat lengkap dengan cara baca.</div>' +
       "</div>";
   }
 
@@ -393,37 +411,34 @@
       (note ? '<div class="band-note">' + esc(note) + "</div>" : "") + "</div>";
   }
 
-  function runLocalOllamaCheck(analysisSnapshot, reqId) {
-    if (typeof window.fetch !== "function" || !analysisSnapshot || !analysisSnapshot.input) return;
-    var loc = window.location || {};
-    var host = loc.hostname || "";
-    var isLocal = host === "localhost" || host === "127.0.0.1" || loc.port === "8088";
-    if (!isLocal) return;
+  function runOnlineAiCheck(analysisSnapshot, reqId) {
+    var sourceText = analysisSnapshot && (analysisSnapshot.original || analysisSnapshot.input || analysisSnapshot.corrected);
+    if (!sourceText || !window.JagoAI) return;
+    analysisSnapshot.aiStatus = "checking";
+    updateMeaningCardOnly(analysisSnapshot);
 
-    analysisSnapshot.ollamaStatus = "checking";
-    window.fetch("/api/coach-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: analysisSnapshot.input })
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      })
-      .then(function (json) {
+    window.JagoAI.analyzeEnglish(sourceText, analysisSnapshot)
+      .then(function (aiRes) {
         if (reqId !== activeLtRequest || lastAnalysis !== analysisSnapshot) return;
-        if (json && json.ok && json.analysis) {
-          analysisSnapshot.ollamaStatus = "ready";
-          analysisSnapshot.ollamaData = json;
-        } else {
-          analysisSnapshot.ollamaStatus = "off";
-        }
-        if (cs.sub === "analyze") renderResults();
+        analysisSnapshot.aiStatus = "ready";
+        analysisSnapshot.aiData = aiRes;
+        updateMeaningCardOnly(analysisSnapshot);
       })
-      .catch(function () {
+      .catch(function (err) {
         if (reqId !== activeLtRequest || lastAnalysis !== analysisSnapshot) return;
-        analysisSnapshot.ollamaStatus = "off";
+        analysisSnapshot.aiStatus = "error";
+        analysisSnapshot.aiError = err && err.message ? err.message : "Layanan AI tidak merespons.";
+        updateMeaningCardOnly(analysisSnapshot);
       });
+  }
+
+  function updateMeaningCardOnly(a) {
+    var slot = document.getElementById("coach-meaning-slot");
+    if (slot) {
+      slot.innerHTML = renderAiMeaningCard(a);
+    } else if (cs.sub === "analyze") {
+      renderResults();
+    }
   }
 
   function runFreeLanguageToolCheck(analysisSnapshot, reqId) {
@@ -492,7 +507,7 @@
     save();
     renderResults();
     runFreeLanguageToolCheck(lastAnalysis, reqId);
-    runLocalOllamaCheck(lastAnalysis, reqId);
+    runOnlineAiCheck(lastAnalysis, reqId);
   }
 
   function ltStatusBadge(status) {
@@ -501,32 +516,77 @@
     return "";
   }
 
-  function renderOllamaCard(a) {
-    if (!a || a.ollamaStatus !== "ready" || !a.ollamaData || !a.ollamaData.analysis) return "";
-    var od = a.ollamaData.analysis;
-    if (!od.c1Upgrade && !od.corrected) return "";
-    var fixesHtml = Array.isArray(od.fixes) && od.fixes.length
-      ? '<ul class="simple-list" style="margin-top:10px;">' + od.fixes.map(function (fx) {
-          return '<li><del>' + esc(fx.wrong) + '</del> -> <strong>' + esc(fx.right) + '</strong>' +
-            (fx.whyId ? ' <span class="fine-print">(' + esc(fx.whyId) + ')</span>' : '') + '</li>';
-        }).join("") + '</ul>'
+  function renderAiMeaningCard(a) {
+    if (!a) return "";
+    if (a.aiStatus === "checking") {
+      return '<div class="panel-card"><div class="panel-card-header"><h2 class="panel-card-title">Arti ke Bahasa Indonesia &amp; Pilihan Tingkatan</h2><span class="tag-mono">Menganalisis...</span></div>' +
+        '<div class="state-banner">Menerjemahkan maksud kalimat Inggrismu ke bahasa Indonesia dan menyiapkan tingkatan kalimat...</div></div>';
+    }
+    var ai = a.aiData;
+    if (!ai) {
+      var fallbackNote = a.aiStatus === "error" && a.aiError
+        ? '<div class="state-banner is-error">' + esc(a.aiError) + ' (menampilkan analisis tata bahasa lokal).</div>'
+        : "";
+      return fallbackNote;
+    }
+
+    var meaningHtml = ai.meaningId
+      ? '<div class="meaning-callout">' +
+        '<span class="meaning-label">Maksud kalimatmu di telinga lawan bicara (Bahasa Indonesia):</span>' +
+        '<p class="meaning-text">"' + esc(ai.meaningId) + '"</p>' +
+        '</div>'
+      : '';
+
+    var tiers = ai.tiers || {};
+    var tierList = [
+      { key: "casual", badge: "B1 · Santai / Sehari-hari", obj: tiers.casual },
+      { key: "professional", badge: "B2 · Kerja Profesional", obj: tiers.professional },
+      { key: "executive", badge: "C1 · Eksekutif Band 7.5+", obj: tiers.executive }
+    ].filter(function (x) { return x.obj && x.obj.en; });
+
+    var tiersHtml = tierList.length
+      ? '<div class="ladder-container" style="margin-top:14px;">' + tierList.map(function (item) {
+          var o = item.obj;
+          return '<div class="ladder-step">' +
+            '<div class="ladder-step-header">' +
+            '<span class="ladder-badge level-' + (item.key === "casual" ? "b1" : item.key === "professional" ? "b2" : "c1") + '">' + esc(item.badge) + '</span>' +
+            '</div>' +
+            '<div class="ladder-en">"' + esc(o.en) + '"</div>' +
+            (o.id ? '<div class="ladder-note"><strong>Arti Indonesia:</strong> ' + esc(o.id) + '</div>' : '') +
+            (o.phonetic ? '<div class="fine-print" style="margin-top:4px;"><strong>Cara baca lidah Indonesia:</strong> ' + esc(o.phonetic) + '</div>' : '') +
+            '<div class="ladder-actions">' +
+            '<button type="button" class="btn btn-primary" data-action="say" data-text="' + esc(o.en) + '" data-rate="0.95">Dengar Normal</button>' +
+            '<button type="button" class="btn" data-action="say" data-text="' + esc(o.en) + '" data-rate="0.72">Lambat</button>' +
+            '</div></div>';
+        }).join("") + '</div>'
       : "";
-    var nextBlock = od.nextEn
-      ? '<div class="next-box" style="margin-top:12px;">' +
-        '<div class="sentence-en"><strong>Saran kalimat lanjutan:</strong> ' + esc(od.nextEn) + '</div>' +
-        (od.nextId ? '<div class="sentence-note">' + esc(od.nextId) + '</div>' : '') +
-        '<div class="control-group"><button type="button" class="btn" data-action="say" data-text="' + esc(od.nextEn) + '" data-rate="0.95">Putar saran lanjutan</button></div>' +
+
+    var fixesHtml = Array.isArray(ai.fixes) && ai.fixes.length
+      ? '<div style="margin-top:14px;"><div class="control-label" style="margin-bottom:6px;">Poin Perbaikan Kontekstual:</div><ul class="simple-list">' +
+        ai.fixes.map(function (fx) {
+          return '<li><del>' + esc(fx.wrong) + '</del> -&gt; <strong>' + esc(fx.right) + '</strong>' +
+            (fx.whyId ? ' <span class="fine-print">(' + esc(fx.whyId) + ')</span>' : '') + '</li>';
+        }).join("") + '</ul></div>'
+      : "";
+
+    var nextBlock = ai.nextEn
+      ? '<div class="next-box" style="margin-top:14px;">' +
+        '<div class="sentence-en"><strong>Saran kalimat lanjutan alami:</strong> ' + esc(ai.nextEn) + '</div>' +
+        (ai.nextId ? '<div class="sentence-note">' + esc(ai.nextId) + '</div>' : '') +
+        '<div class="control-group"><button type="button" class="btn" data-action="say" data-text="' + esc(ai.nextEn) + '" data-rate="0.95">Putar saran lanjutan</button></div>' +
         '</div>'
       : "";
 
-    return '<div id="coach-ollama-box" class="panel-card">' +
+    return '<div id="coach-meaning-card" class="panel-card">' +
       '<div class="panel-card-header">' +
-      '<h2 class="panel-card-title">Bedah Konteks AI Lokal (' + esc(a.ollamaData.model || "Ollama") + ')</h2>' +
-      '<span class="tag-mono">' + esc(od.topicId || "Konteks Kalimat") + '</span>' +
+      '<h2 class="panel-card-title">Arti Bahasa Indonesia &amp; Tingkatan Standar Tinggi</h2>' +
+      '<span class="tag-mono">' + esc((ai.cefr ? ai.cefr + " · " : "") + (ai.source || "Online")) + '</span>' +
       '</div>' +
-      (od.intentSummaryId ? '<p class="fine-print" style="margin-bottom:8px;">' + esc(od.intentSummaryId) + '</p>' : '') +
-      (od.c1Upgrade ? '<p class="corrected-text">' + esc(od.c1Upgrade) + '</p>' : '') +
-      (od.c1Upgrade ? '<div class="control-group"><button type="button" class="btn btn-primary" data-action="say" data-text="' + esc(od.c1Upgrade) + '" data-rate="0.95">Putar versi AI Lokal</button></div>' : '') +
+      '<div class="control-group" style="margin-bottom:10px;">' +
+      '<span class="status-chip is-playing">' + esc(ai.statusBadge || "Analisis Selesai") + '</span>' +
+      '</div>' +
+      meaningHtml +
+      tiersHtml +
       fixesHtml +
       nextBlock +
       '</div>';
@@ -660,7 +720,7 @@
       '<button type="button" class="btn" data-action="say" data-text="' + esc(a.c1Upgrade || a.corrected) + '" data-rate="0.72">Putar lambat</button></div>' +
       '<div id="coach-copy-c1-feedback" aria-live="polite"></div></div>' +
 
-      renderOllamaCard(a) +
+      '<div id="coach-meaning-slot">' + renderAiMeaningCard(a) + '</div>' +
 
       '<div class="panel-card"><div class="panel-card-header"><h2 class="panel-card-title">Rincian Koreksi (' + a.findings.length + ")</h2></div>" + findingsHtml + "</div>" +
 
@@ -1185,6 +1245,9 @@
       cs.sub = btn.getAttribute("data-sub");
       save();
       render();
+      if (window.JagoSwitchTab) {
+        window.JagoSwitchTab("coach", cs.sub === "analyze" ? "studio" : "progress", cs.sub === "analyze" ? null : cs.sub);
+      }
     } else if (action === "analyze") {
       runAnalysis();
     } else if (action === "clear") {
@@ -1213,6 +1276,7 @@
         cs.sub = "analyze";
         save();
         render();
+        if (window.JagoSwitchTab) window.JagoSwitchTab("coach", "studio");
         runAnalysis();
       }
     } else if (action === "del-stop") {
@@ -1220,6 +1284,33 @@
       cs.customStops = (cs.customStops || []).filter(function (st) { return st.id !== delId; });
       save();
       render();
+    } else if (action === "toggle-save-tpl") {
+      var bar = document.getElementById("coach-save-tpl-bar");
+      var inp = document.getElementById("coach-quick-tpl-label");
+      if (bar) {
+        var openNow = bar.style.display === "none";
+        bar.style.display = openNow ? "flex" : "none";
+        if (openNow && inp) inp.focus();
+      }
+    } else if (action === "cancel-quick-tpl") {
+      var barC = document.getElementById("coach-save-tpl-bar");
+      if (barC) barC.style.display = "none";
+    } else if (action === "save-quick-tpl") {
+      var lInp = document.getElementById("coach-quick-tpl-label");
+      var taVal = (document.getElementById("coach-input") || {}).value || "";
+      var tplFb = document.getElementById("coach-tpl-feedback");
+      var lbl = lInp ? lInp.value.trim() : "";
+      if (!lbl || !taVal.trim()) {
+        if (tplFb) tplFb.innerHTML = '<div class="state-banner is-error">Isi kalimat latihan dan nama template sebelum menyimpan.</div>';
+        return;
+      }
+      cs.customContexts = cs.customContexts || [];
+      cs.customContexts.push({ id: "ctx-" + Date.now(), label: lbl, text: taVal.trim(), isCustom: true });
+      cs.draft = taVal.trim();
+      save();
+      render();
+      var postFb = document.getElementById("coach-tpl-feedback");
+      if (postFb) postFb.innerHTML = '<div class="state-banner is-success">Template "' + esc(lbl) + '" tersimpan.</div>';
     } else if (action === "del-context") {
       var ctxId = btn.getAttribute("data-id");
       cs.customContexts = (cs.customContexts || []).filter(function (cx) { return cx.id !== ctxId; });
@@ -1352,13 +1443,26 @@
     if (e.key === "Escape") stopSpeech();
   });
 
+  window.JagoCoachSetSub = function (sub) {
+    cs.sub = sub || "analyze";
+    save();
+    render();
+  };
+
+  window.JagoCoachGetSub = function () {
+    return cs.sub;
+  };
+
   window.JagoCoachAnalyzeText = function (text) {
     cs.draft = String(text || "");
     cs.sub = "analyze";
     save();
     render();
-    var coachBtn = document.getElementById("tab-btn-coach");
-    if (coachBtn) coachBtn.click();
+    if (window.JagoSwitchTab) window.JagoSwitchTab("coach", "studio");
+    else {
+      var coachBtn = document.getElementById("tab-btn-coach");
+      if (coachBtn) coachBtn.click();
+    }
     runAnalysis();
   };
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "jago-english-v3";
+const CACHE_NAME = "jago-english-v4";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const STATIC_ASSETS = [
   "./topics-data-2.js",
   "./conversation-data.js",
   "./speech-engine.js",
+  "./ai-engine.js",
   "./app.js",
   "./coach-data.js",
   "./coach-core.js",

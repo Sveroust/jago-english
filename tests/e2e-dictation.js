@@ -67,7 +67,8 @@ const URL = "http://localhost:8088/";
     const translateResultsText = await page.textContent("#translate-results");
     assert.ok(
       translateResultsText.includes("Tangga Keluwesan Bahasa") ||
-      translateResultsText.includes("Analisis Kalimat Pikiran Kamu"),
+      translateResultsText.includes("Analisis Kalimat Pikiran Kamu") ||
+      translateResultsText.includes("Hasil Inggris Bertingkat"),
       "Expected Penerjemah Pikiran results auto-rendered"
     );
 

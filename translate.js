@@ -150,6 +150,47 @@
   }
 
   var activeTranslateReq = 0;
+  var CUSTOM_TPL_KEY = "jago_translate_custom_tpl_v1";
+
+  function loadCustomTemplates() {
+    try {
+      var raw = window.localStorage.getItem(CUSTOM_TPL_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveCustomTemplates(list) {
+    try {
+      window.localStorage.setItem(CUSTOM_TPL_KEY, JSON.stringify(list || []));
+    } catch (_) {}
+  }
+
+  function toPhonetics(enText) {
+    if (window.JagoCoachCore && typeof window.JagoCoachCore.toIndonesianPhonetics === "function") {
+      return window.JagoCoachCore.toIndonesianPhonetics(enText, window.COACH_DATA || {});
+    }
+    return "";
+  }
+
+  function renderTemplatePillsHtml() {
+    var intentPills = DATA.intents.map(function (it) {
+      return '<button type="button" class="btn btn-compact" data-intent-id="' + esc(it.id) + '">' +
+        esc(it.category.split("&")[0].trim()) + ": " + esc(it.indo.slice(0, 28)) + "..." +
+        '</button>';
+    }).join("");
+
+    var customPills = loadCustomTemplates().map(function (ct) {
+      return '<span class="tpl-chip-group">' +
+        '<button type="button" class="btn btn-compact" data-custom-tpl-id="' + esc(ct.id) + '">' + esc(ct.label) + '</button>' +
+        '<button type="button" class="btn btn-compact tpl-del-btn" data-del-custom-tpl="' + esc(ct.id) + '" aria-label="Hapus template ' + esc(ct.label) + '">&times;</button>' +
+        '</span>';
+    }).join("");
+
+    return intentPills + customPills;
+  }
 
   function renderShell() {
     if (!root) return;
@@ -158,37 +199,37 @@
       return;
     }
 
-    var intentPills = DATA.intents.map(function (it) {
-      return '<button type="button" class="btn" data-intent-id="' + esc(it.id) + '">' +
-        esc(it.category.split("&")[0].trim()) + ": " + esc(it.indo.slice(0, 32)) + "..." +
-        '</button>';
-    }).join("");
-
     root.innerHTML = '' +
       '<div class="panel-card">' +
       '<div class="panel-card-header">' +
-      '<h3 class="panel-card-title">Ungkapkan Maksudmu dalam Bahasa Indonesia</h3>' +
-      '<span class="tag-mono">Penerjemah Pikiran ke Native English</span>' +
+      '<h3 class="panel-card-title">Template &amp; Pikiran dalam Bahasa Indonesia</h3>' +
+      '<span class="tag-mono">Boleh Bicara Seenak Hati</span>' +
       '</div>' +
-      '<p class="fine-print" style="margin-bottom:12px;">' +
-      'Ketik apa yang ingin kamu sampaikan. Sistem akan membongkar susunan kata-per-kata yang kaku, membedah 5 tingkatan keluwesan CEFR (A2 sampai C2), dan membandingkan gaya formal vs santai.' +
+      '<p class="fine-print" style="margin-bottom:10px;">' +
+      'Pilih salah satu template lalu ubah kalimatnya sesuai kondisi nyata (atau rekam suara Indonesia bebas). Sistem akan mengubahnya ke Inggris bertingkat sekaligus menampilkan <strong>arti balik ke Indonesia &amp; kesannya</strong>.' +
       '</p>' +
-      '<div class="translate-intent-strip">' +
-      intentPills +
+      '<div class="translate-intent-strip tpl-chip-bar" id="translate-template-strip">' +
+      renderTemplatePillsHtml() +
       '</div>' +
-      '<label for="translate-input" class="control-label" style="display:block;margin-bottom:6px;">Pikiran dalam bahasa Indonesia:</label>' +
-      '<textarea id="translate-input" class="coach-textarea" rows="4" placeholder="Contoh: Aku mau follow up rekan bisnis, kasih tahu progres perizinan dan foto produk, lalu sekadar mengingatkan soal video demo..."></textarea>' +
+      '<label for="translate-input" class="control-label" style="display:block;margin-bottom:6px;">Kalimat / maksudmu dalam bahasa Indonesia:</label>' +
+      '<textarea id="translate-input" class="coach-textarea" rows="4" placeholder="Ketik atau rekam sesuka hati... Contoh: Mas Malik, nanti saya jemput di bandara agak telat karena Jakarta hujan deras dan tol macet."></textarea>' +
       '<div class="control-group" style="margin-top:12px;">' +
-      '<button type="button" class="btn btn-primary" id="translate-run-btn">Terjemahkan ke Native</button>' +
+      '<button type="button" class="btn btn-primary" id="translate-run-btn">Ubah ke Inggris Bertingkat</button>' +
       '<button type="button" class="btn" id="translate-mic-btn" aria-pressed="false">Dikte Suara (Indonesia)</button>' +
+      '<button type="button" class="btn" id="translate-toggle-save-tpl-btn">+ Simpan Jadi Template</button>' +
       '<button type="button" class="btn" id="translate-clear-btn">Kosongkan</button>' +
       '</div>' +
+      '<div id="translate-save-tpl-bar" class="inline-save-bar" style="display:none;">' +
+      '<input type="text" id="translate-quick-tpl-label" class="text-input" placeholder="Nama template (mis. Jemput Bandara Hujan)...">' +
+      '<button type="button" class="btn btn-primary" id="translate-save-tpl-confirm">Simpan Template</button>' +
+      '<button type="button" class="btn" id="translate-save-tpl-cancel">Batal</button>' +
+      '</div>' +
+      '<div id="translate-tpl-feedback" aria-live="polite"></div>' +
       '<div id="translate-mic-status" aria-live="polite"></div>' +
       '</div>' +
       '<div id="translate-results" aria-live="polite" style="margin-top:16px;"></div>';
 
     bindEvents();
-    // Pre-select first intent
     selectIntent(DATA.intents[0]);
   }
 
@@ -199,17 +240,18 @@
     renderResults({ matched: it, score: 100, related: [] }, it.indo);
   }
 
-  function renderLadderStep(level, enText, noteText, customTitle) {
+  function renderLadderStep(level, enText, noteText, customTitle, backIdText, phoneticText) {
     var lvlClass = "level-" + level.toLowerCase();
     var ladderClass = "ladder-step ladder-" + level.toLowerCase();
     var labelTitle = customTitle || "";
     if (!labelTitle) {
       if (level === "A2") labelTitle = "Level A2 - Terjemahan Harfiah (Kaku)";
-      else if (level === "B1") labelTitle = "Level B1 - Sopan &amp; Jelas (Dasar Kerja)";
+      else if (level === "B1") labelTitle = "Level B1 - Sopan &amp; Jelas (Sehari-hari)";
       else if (level === "B2") labelTitle = "Level B2 - Standar Kantor Internasional";
       else if (level === "C1") labelTitle = "Level C1 - Eksekutif &amp; Berbobot (IELTS Band 7.5 - 8.0)";
       else if (level === "C2") labelTitle = "Level C2 - Fasih Penuh (Mother Tongue Mastery)";
     }
+    var phon = phoneticText || toPhonetics(enText);
     return '<div class="' + ladderClass + '">' +
       '<div class="ladder-step-header">' +
       '<div style="display:flex; align-items:center; gap:8px;">' +
@@ -219,75 +261,85 @@
       '<span class="tag-mono" style="font-size:0.75rem;">CEFR ' + esc(level) + '</span>' +
       '</div>' +
       '<div class="ladder-en">"' + esc(enText) + '"</div>' +
+      (backIdText ? '<div class="ladder-back-id"><strong>Arti balik &amp; maksudnya:</strong> ' + esc(backIdText) + '</div>' : '') +
       '<div class="ladder-note">' + esc(noteText) + '</div>' +
+      (phon ? '<div class="fine-print" style="margin-top:4px;"><strong>Cara baca lidah Indonesia:</strong> ' + esc(phon) + '</div>' : '') +
       '<div class="ladder-actions">' +
       '<button type="button" class="btn btn-primary" data-speak="' + esc(enText) + '">Dengar Suara</button>' +
       '<button type="button" class="btn" data-copy="' + esc(enText) + '">Salin Kalimat</button>' +
+      '<button type="button" class="btn" data-practice-coach="' + esc(enText) + '">Latih Ucapkan</button>' +
       '</div>' +
       '</div>';
   }
 
-  function renderRegisterPair(formalText, casualText) {
+  function renderRegisterPair(formalObj, casualObj) {
+    var formalText = typeof formalObj === "string" ? formalObj : (formalObj && formalObj.en) || "";
+    var formalBack = typeof formalObj === "object" && formalObj ? formalObj.backId : "";
+    var casualText = typeof casualObj === "string" ? casualObj : (casualObj && casualObj.en) || "";
+    var casualBack = typeof casualObj === "object" && casualObj ? casualObj.backId : "";
+
     return '<div class="register-grid">' +
       '<div class="register-box register-box-formal">' +
-      '<div class="register-box-title"><span class="register-badge register-badge-formal">Saluran Resmi / Memo Direksi / Klien Eksternal</span><button type="button" class="btn" style="font-size:0.75rem; padding:2px 8px;" data-copy="' + esc(formalText) + '">Salin</button></div>' +
+      '<div class="register-box-title"><span class="register-badge register-badge-formal">Saluran Resmi / Email / Klien Eksternal</span><button type="button" class="btn" style="font-size:0.75rem; padding:2px 8px;" data-copy="' + esc(formalText) + '">Salin</button></div>' +
       '<div class="register-box-text">"' + esc(formalText) + '"</div>' +
-      '<button type="button" class="btn btn-primary" style="margin-top:12px; font-size:0.82rem; padding:5px 12px;" data-speak="' + esc(formalText) + '">Dengar Suara Formal</button>' +
+      (formalBack ? '<div class="fine-print" style="margin-top:6px;"><strong>Maksudnya:</strong> ' + esc(formalBack) + '</div>' : '') +
+      '<div class="control-group" style="margin-top:12px;">' +
+      '<button type="button" class="btn btn-primary btn-compact" data-speak="' + esc(formalText) + '">Dengar Resmi</button>' +
+      '<button type="button" class="btn btn-compact" data-practice-coach="' + esc(formalText) + '">Latih Ucapkan</button>' +
+      '</div>' +
       '</div>' +
       '<div class="register-box register-box-casual">' +
       '<div class="register-box-title"><span class="register-badge register-badge-casual">Saluran Santai / WhatsApp / Obrolan Tim</span><button type="button" class="btn" style="font-size:0.75rem; padding:2px 8px;" data-copy="' + esc(casualText) + '">Salin</button></div>' +
       '<div class="register-box-text">"' + esc(casualText) + '"</div>' +
-      '<button type="button" class="btn" style="margin-top:12px; font-size:0.82rem; padding:5px 12px;" data-speak="' + esc(casualText) + '">Dengar Suara Santai</button>' +
+      (casualBack ? '<div class="fine-print" style="margin-top:6px;"><strong>Maksudnya:</strong> ' + esc(casualBack) + '</div>' : '') +
+      '<div class="control-group" style="margin-top:12px;">' +
+      '<button type="button" class="btn btn-compact" data-speak="' + esc(casualText) + '">Dengar Santai</button>' +
+      '<button type="button" class="btn btn-compact" data-practice-coach="' + esc(casualText) + '">Latih Ucapkan</button>' +
+      '</div>' +
       '</div>' +
       '</div>';
   }
 
-  function fetchLocalTranslateAi(originalText, reqId) {
+  function fetchOnlineTranslateAi(originalText, reqId) {
     var slot = document.getElementById("translate-ai-slot");
-    if (!slot || typeof window.fetch !== "function") return;
-    var loc = window.location || {};
-    var host = loc.hostname || "";
-    var isLocal = host === "localhost" || host === "127.0.0.1" || loc.port === "8088";
-    if (!isLocal) return;
+    if (!slot || !window.JagoAI) return;
 
-    slot.innerHTML = '<div class="state-banner">Menyusun variasi kalimat alami dengan mesin AI lokal...</div>';
-    window.fetch("/api/translate-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ indo: originalText })
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      })
-      .then(function (json) {
+    slot.innerHTML = '<div class="state-banner">Menyusun versi bahasa Inggris bertingkat dan arti baliknya...</div>';
+    window.JagoAI.translateIndonesian(originalText)
+      .then(function (tr) {
         if (reqId !== activeTranslateReq) return;
         var currentSlot = document.getElementById("translate-ai-slot");
         if (!currentSlot) return;
-        if (!json || !json.ok || !json.translation) {
+        if (!tr || !tr.ok || !Array.isArray(tr.levels) || !tr.levels.length) {
           currentSlot.innerHTML = "";
           return;
         }
-        var tr = json.translation;
-        var steps = [];
-        if (tr.b1) steps.push(renderLadderStep("B1", tr.b1, "Versi dasar yang jelas, sopan, dan mudah langsung diucapkan.", "Level B1 - Sopan &amp; Jelas"));
-        if (tr.b2) steps.push(renderLadderStep("B2", tr.b2, "Versi luwes setara komunikasi kerja internasional.", "Level B2 - Standar Profesional"));
-        if (tr.c1) steps.push(renderLadderStep("C1", tr.c1, "Versi ringkas berwibawa untuk rapat atau email eksekutif.", "Level C1 - Eksekutif Band 7.5+"));
+        var steps = tr.levels.map(function (lv) {
+          var title = "Level " + lv.code + " - " + (lv.label || "Variasi Alami");
+          var note = lv.nuanceId || "Susunan kalimat alami sesuai konteks pikiranmu.";
+          return renderLadderStep(lv.code, lv.en, note, title, lv.backId, lv.phonetic);
+        }).join("");
+
         currentSlot.innerHTML = '' +
           '<div class="panel-card" style="margin-top:16px;">' +
           '<div class="panel-card-header">' +
-          '<h3 class="panel-card-title">Susunan Kalimat Otomatis AI Lokal (' + esc(json.model || "Ollama") + ')</h3>' +
-          '<span class="tag-mono">Sesuai Konteks Pikiranmu</span>' +
+          '<h3 class="panel-card-title">Hasil Inggris Bertingkat &amp; Arti Baliknya</h3>' +
+          '<span class="tag-mono">' + esc(tr.source || "Online") + '</span>' +
           '</div>' +
-          (tr.tipId ? '<div class="topic-hook-box"><strong>Tip Terjemahan:</strong> ' + esc(tr.tipId) + '</div>' : '') +
-          '<div class="ladder-container" style="margin-top:14px;">' + steps.join("") + '</div>' +
-          ((tr.formal || tr.casual) ? '<h4 style="margin:20px 0 8px; font-size:1.02rem; font-weight:800;">Pilihan Register (Formal vs Santai):</h4>' + renderRegisterPair(tr.formal || tr.c1 || tr.b2, tr.casual || tr.b1) : '') +
+          (tr.summaryId ? '<div class="meaning-callout" style="margin-bottom:12px;"><span class="meaning-label">Maksud yang ditangkap sistem dari kalimatmu:</span><p class="meaning-text">' + esc(tr.summaryId) + '</p></div>' : '') +
+          (tr.tipId ? '<div class="topic-hook-box"><strong>Tip Bahasa &amp; Kesan:</strong> ' + esc(tr.tipId) + '</div>' : '') +
+          '<div class="ladder-container" style="margin-top:14px;">' + steps + '</div>' +
+          ((tr.formal && tr.formal.en) || (tr.casual && tr.casual.en)
+            ? '<h4 style="margin:20px 0 8px; font-size:1.02rem; font-weight:800;">Pilihan Register (Resmi vs Santai):</h4>' + renderRegisterPair(tr.formal || tr.levels[tr.levels.length - 1], tr.casual || tr.levels[0])
+            : '') +
           '</div>';
       })
-      .catch(function () {
+      .catch(function (err) {
         if (reqId !== activeTranslateReq) return;
         var currentSlot = document.getElementById("translate-ai-slot");
-        if (currentSlot) currentSlot.innerHTML = "";
+        if (currentSlot) {
+          currentSlot.innerHTML = '<div class="state-banner">Mesin terjemahan online sedang tidak terjangkau (' + esc(err && err.message ? err.message : "offline") + '). Gunakan jembatan kata di atas atau isi API Key di Tab 4.</div>';
+        }
       });
   }
 
@@ -362,7 +414,7 @@
         '<div id="translate-ai-slot"></div>' +
         nuanceHtml;
 
-      fetchLocalTranslateAi(originalText, reqId);
+      fetchOnlineTranslateAi(originalText, reqId);
       return;
     }
 
@@ -391,7 +443,31 @@
     root.addEventListener("click", function (e) {
       var t = e.target;
       var intentBtn = t.closest ? t.closest("[data-intent-id]") : null;
-      if (intentBtn) {
+      var customTplBtn = t.closest ? t.closest("[data-custom-tpl-id]") : null;
+      var delTplBtn = t.closest ? t.closest("[data-del-custom-tpl]") : null;
+      var practiceBtn = t.closest ? t.closest("[data-practice-coach]") : null;
+
+      if (delTplBtn) {
+        var delId = delTplBtn.getAttribute("data-del-custom-tpl");
+        var remaining = loadCustomTemplates().filter(function (c) { return c.id !== delId; });
+        saveCustomTemplates(remaining);
+        var strip = document.getElementById("translate-template-strip");
+        if (strip) strip.innerHTML = renderTemplatePillsHtml();
+      } else if (customTplBtn) {
+        var cid = customTplBtn.getAttribute("data-custom-tpl-id");
+        var found = loadCustomTemplates().filter(function (c) { return c.id === cid; })[0];
+        if (found) {
+          var inpT = document.getElementById("translate-input");
+          if (inpT) inpT.value = found.indo;
+          var mFound = findMatchingIntent(found.indo);
+          if (mFound) renderResults(mFound, found.indo);
+        }
+      } else if (practiceBtn) {
+        var enLine = practiceBtn.getAttribute("data-practice-coach");
+        if (enLine && window.JagoCoachAnalyzeText) {
+          window.JagoCoachAnalyzeText(enLine);
+        }
+      } else if (intentBtn) {
         var id = intentBtn.getAttribute("data-intent-id");
         var match = DATA.intents.filter(function (x) { return x.id === id; })[0];
         if (match) selectIntent(match);
@@ -401,8 +477,43 @@
         copyText(t.getAttribute("data-copy"), t);
       } else if (t.id === "translate-run-btn") {
         var val = (document.getElementById("translate-input") || {}).value || "";
+        if (!val.trim()) {
+          var resBox = document.getElementById("translate-results");
+          if (resBox) resBox.innerHTML = '<div class="state-banner is-error">Tulis atau rekam dulu kalimat bahasa Indonesiamu.</div>';
+          return;
+        }
         var match2 = findMatchingIntent(val);
         if (match2) renderResults(match2, val);
+      } else if (t.id === "translate-toggle-save-tpl-btn") {
+        var sBar = document.getElementById("translate-save-tpl-bar");
+        var lInp = document.getElementById("translate-quick-tpl-label");
+        if (sBar) {
+          var showNow = sBar.style.display === "none";
+          sBar.style.display = showNow ? "flex" : "none";
+          if (showNow && lInp) lInp.focus();
+        }
+      } else if (t.id === "translate-save-tpl-cancel") {
+        var cBar = document.getElementById("translate-save-tpl-bar");
+        if (cBar) cBar.style.display = "none";
+      } else if (t.id === "translate-save-tpl-confirm") {
+        var nameInp = document.getElementById("translate-quick-tpl-label");
+        var textInp = document.getElementById("translate-input");
+        var fb = document.getElementById("translate-tpl-feedback");
+        var lbl = nameInp ? nameInp.value.trim() : "";
+        var txt = textInp ? textInp.value.trim() : "";
+        if (!lbl || !txt) {
+          if (fb) fb.innerHTML = '<div class="state-banner is-error">Isi kalimat Indonesia dan nama template dulu.</div>';
+          return;
+        }
+        var curList = loadCustomTemplates();
+        curList.push({ id: "ct-" + Date.now(), label: lbl, indo: txt });
+        saveCustomTemplates(curList);
+        var stripEl = document.getElementById("translate-template-strip");
+        if (stripEl) stripEl.innerHTML = renderTemplatePillsHtml();
+        var sBar2 = document.getElementById("translate-save-tpl-bar");
+        if (sBar2) sBar2.style.display = "none";
+        if (nameInp) nameInp.value = "";
+        if (fb) fb.innerHTML = '<div class="state-banner is-success">Template "' + esc(lbl) + '" tersimpan. Klik kapan saja lalu ubah sesuai kebutuhan.</div>';
       } else if (t.id === "translate-clear-btn") {
         var inp = document.getElementById("translate-input");
         if (inp) { inp.value = ""; inp.focus(); }
