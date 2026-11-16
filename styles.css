@@ -2688,7 +2688,7 @@ button.diff-chip {
   gap: 10px;
 }
 
-.studio-tutorial-item strong {
+.studio-tutorial-item > div > strong {
   display: block;
   font-size: 0.92rem;
   color: var(--text-primary);
