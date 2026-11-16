@@ -237,12 +237,15 @@
       [/\bit's\b/gi, function (m) { return m[0] === "I" ? "It is" : "it is"; }],
       [/\bvery\s+good\b/gi, "remarkable"],
       [/\bvery\s+bad\b/gi, "severe"],
-      [/\bvery\s+tired\b/gi, "thoroughly exhausted"],
+      [/\b(?:very|really)\s+tired\b/gi, "thoroughly exhausted"],
       [/\bvery\s+busy\b/gi, "heavily occupied"],
+      [/\btraffic\s+jam\b/gi, "heavy traffic congestion"],
+      [/\bpile-?up\s+of\s+work\b/gi, "mounting workload"],
       [/\bmake\s+sure\b/gi, "ensure"],
       [/\bI\s+am\s+sorry\s+(?:for|about)\b/gi, "Please accept my apologies for"],
+      [/\b(?:apologies|sorry)\s+(?:for|about)\b/gi, "I sincerely apologize for"],
       [/\bI\s+apologize\s+(?:for|about)\b/gi, "Please accept my sincere apologies regarding"],
-      [/\bright\s+now\b/gi, "currently"],
+      [/\bright\s+now\b/gi, "at the moment"],
       [/\bbecause\s+of\b/gi, "due to"],
       [/\btalk\s+about\b/gi, "discuss"],
       [/\bhelp\s+me\b/gi, "assist me"],
@@ -292,7 +295,9 @@
       .replace(/\b([Ww])on't\b/g, "$1ill not")
       .replace(/\b([Dd])idn't\b/g, "$1id not")
       .replace(/\b([Ii])t's\b/g, "$1t is")
-      .replace(/\bSorry (?:about|for)\b/gi, "Apologies for")
+      .replace(/\b([Ss])orry\s+(about|for)\b/g, function (m, sCh) {
+        return sCh === "S" ? "Apologies for" : "apologies for";
+      })
       .replace(/\ba bit late\b/gi, "slightly delayed");
 
     var exec = buildBand75Upgrade(prof, data || {});

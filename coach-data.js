@@ -464,6 +464,18 @@ window.COACH_DATA = (function () {
       wrong: "We are preparing for currently we are preparing IDAK.", right: "We are currently preparing IDAK."
     },
     {
+      id: "sorry-for-clause", cat: "PREPOSISI & GERUND",
+      pattern: /\bsorry\s+for\s+(?:I|we|they|he|she)\s+([a-z]{3,})\b/gi,
+      replace: function (m, verb) {
+        var v = verb.toLowerCase();
+        if (/ing$/.test(v)) return "sorry for " + v;
+        if (/e$/.test(v) && !/(ee|oe|ye)$/.test(v)) return "sorry for " + v.slice(0, -1) + "ing";
+        return "sorry for " + v + "ing";
+      },
+      why: "Setelah preposisi 'for', bahasa Inggris memakai kata kerja berakhiran -ing (gerund), bukan subjek + kata kerja ('sorry for I arrive').",
+      wrong: "sorry for I arrive late", right: "sorry for arriving late"
+    },
+    {
       id: "past-time-perfect", cat: "TENSE", manual: true,
       pattern: /(?<!since\s)(?<!until\s)\b(?:have|has)\s+\w+\s+(?:[^.?!]*?\s)?(?:yesterday|last\s+(?:week|month|year|night)|(?:two|three|four|five|\d+)\s+(?:days|weeks|months|years)\s+ago)\b/gi,
       suggest: "Past Simple (V2, hapus have/has)",
