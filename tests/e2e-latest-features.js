@@ -192,10 +192,17 @@ const URL = "http://localhost:8088/";
   assert.ok(!customTransText.includes("Menghubungi Ulang Klien"), "Custom thought must NOT blindly fall back to intents[0]");
   console.log("PASS: Penerjemah Pikiran handles custom thoughts accurately.");
 
-  console.log("10. Verifying 390px Phone Compact Sidebar & Responsive Adjustment...");
+  console.log("10. Verifying 390px Phone Compact Sidebar & All-Tabs Responsive Overflow...");
   await page.setViewportSize({ width: 390, height: 844 });
+  const allTabIds = await page.$$eval(".nav-tab", (els) => els.map((e) => e.getAttribute("data-tab")));
+  for (const tid of allTabIds) {
+    await page.click("#tab-btn-" + tid);
+    await page.waitForTimeout(180);
+    const ov = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    assert.ok(!ov, `Horizontal overflow at 390px in tab ${tid}`);
+  }
   await page.click("#tab-btn-topics");
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(200);
   const mobileSidebarInfo = await page.evaluate(() => {
     const sb = document.querySelector("#topics-root .topics-sidebar");
     const overflow = document.documentElement.scrollWidth > document.documentElement.clientWidth;
@@ -209,7 +216,7 @@ const URL = "http://localhost:8088/";
   });
   assert.ok(!mobileSidebarInfo.overflow, "Zero horizontal overflow at 390px width");
   assert.ok(mobileSidebarInfo.maxHeight <= 240 && mobileSidebarInfo.height <= 240, `Expected compact topics sidebar <= 240px on mobile, got ${JSON.stringify(mobileSidebarInfo)}`);
-  console.log("PASS: 390px phone compact sidebar and overflow check verified.");
+  console.log("PASS: 390px phone all-tabs zero overflow and compact sidebar verified.");
 
   assert.strictEqual(errors.length, 0, `Page errors encountered: ${errors.join(", ")}`);
   console.log("ALL LATEST FEATURE TESTS PASSED (0 ERRORS)!");

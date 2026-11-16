@@ -579,6 +579,8 @@ pre,
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .control-label {
@@ -597,6 +599,8 @@ pre,
   background-color: var(--bg-canvas);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tense-workbench-layout {
@@ -606,8 +610,15 @@ pre,
   align-items: start;
 }
 
+.tense-workbench-layout > * {
+  min-width: 0;
+}
+
 .tense-matrix-table-wrap {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   background-color: var(--bg-surface);
