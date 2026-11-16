@@ -310,8 +310,21 @@
         if (reqId !== activeTranslateReq) return;
         var currentSlot = document.getElementById("translate-ai-slot");
         if (!currentSlot) return;
-        if (!tr || !tr.ok || !Array.isArray(tr.levels) || !tr.levels.length) {
+        if (!tr || !tr.ok) {
           currentSlot.innerHTML = "";
+          return;
+        }
+        if (!Array.isArray(tr.levels) || !tr.levels.length) {
+          currentSlot.innerHTML = '' +
+            '<div class="panel-card" style="margin-top:16px;">' +
+            '<div class="panel-card-header">' +
+            '<h3 class="panel-card-title">Mode Hemat / Limit Harian Tercapai</h3>' +
+            '<span class="tag-mono">' + esc(tr.source || "Lokal") + '</span>' +
+            '</div>' +
+            (tr.normalizedIndo ? '<p class="fine-print" style="margin-bottom:8px;"><strong>Kalimat dirapikan:</strong> "' + esc(tr.normalizedIndo) + '"</p>' : '') +
+            '<div class="state-banner">' + esc(tr.summaryId || "Layanan terjemah sedang mencapai batas kuota harian gratis.") + '</div>' +
+            (tr.tipId ? '<p class="fine-print" style="margin-top:8px;">' + esc(tr.tipId) + '</p>' : '') +
+            '</div>';
           return;
         }
         var steps = tr.levels.map(function (lv) {
@@ -326,6 +339,7 @@
           '<h3 class="panel-card-title">Hasil Inggris Bertingkat &amp; Arti Baliknya</h3>' +
           '<span class="tag-mono">' + esc(tr.source || "Online") + '</span>' +
           '</div>' +
+          (tr.normalizedIndo ? '<p class="fine-print" style="margin-bottom:10px;"><strong>Bahasa sehari-hari dipahami sebagai:</strong> "' + esc(tr.normalizedIndo) + '"</p>' : '') +
           (tr.summaryId ? '<div class="meaning-callout" style="margin-bottom:12px;"><span class="meaning-label">Maksud yang ditangkap sistem dari kalimatmu:</span><p class="meaning-text">' + esc(tr.summaryId) + '</p></div>' : '') +
           (tr.tipId ? '<div class="topic-hook-box"><strong>Tip Bahasa &amp; Kesan:</strong> ' + esc(tr.tipId) + '</div>' : '') +
           '<div class="ladder-container" style="margin-top:14px;">' + steps + '</div>' +

@@ -1,16 +1,7 @@
 (function () {
   "use strict";
 
-  var CFG_KEY = "jago_ai_online_cfg_v1";
-
-  var DEFAULT_CFG = {
-    provider: "auto",
-    geminiKey: "",
-    geminiModel: "gemini-2.5-flash",
-    groqKey: "",
-    groqModel: "llama-3.3-70b-versatile",
-    useGroqWhisper: false
-  };
+  var translationCache = {};
 
   function cleanStr(val) {
     return String(val || "")
@@ -19,69 +10,20 @@
       .trim();
   }
 
-  function loadConfig() {
-    var cfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
-    try {
-      var raw = window.localStorage.getItem(CFG_KEY);
-      if (!raw) return cfg;
-      var parsed = JSON.parse(raw);
-      Object.keys(cfg).forEach(function (k) {
-        if (parsed[k] !== undefined && parsed[k] !== null) {
-          cfg[k] = parsed[k];
-        }
-      });
-    } catch (_) {}
-    return cfg;
-  }
-
-  function saveConfig(patch) {
-    var cur = loadConfig();
-    Object.keys(patch || {}).forEach(function (k) {
-      if (DEFAULT_CFG.hasOwnProperty(k)) {
-        cur[k] = patch[k];
-      }
-    });
-    try {
-      window.localStorage.setItem(CFG_KEY, JSON.stringify(cur));
-    } catch (_) {}
-    return cur;
-  }
-
-  function isLocalOrigin() {
-    var loc = window.location || {};
-    var host = loc.hostname || "";
-    return host === "localhost" || host === "127.0.0.1" || loc.port === "8088";
+  function isQuotaWarning(text) {
+    var s = String(text || "");
+    return /MYMEMORY\s+WARNING|QUERY\s+LENGTH\s+LIMIT|YOU\s+USED\s+ALL\s+AVAILABLE/i.test(s);
   }
 
   function getActiveTierInfo() {
-    var cfg = loadConfig();
-    var p = cfg.provider || "auto";
-    if ((p === "groq" || (p === "auto" && cfg.groqKey)) && cfg.groqKey) {
-      return { id: "groq", label: "Groq Cloud Aktif (Super-Pintar Online)", isCloudKey: true };
-    }
-    if ((p === "gemini" || (p === "auto" && cfg.geminiKey)) && cfg.geminiKey) {
-      return { id: "gemini", label: "Google Gemini Aktif (Super-Pintar Online)", isCloudKey: true };
-    }
-    if (p === "local" && isLocalOrigin()) {
-      return { id: "local", label: "Server Laptop Lokal Aktif", isCloudKey: false };
-    }
-    return { id: "free", label: "Mode Gratis Online (Tanpa Key)", isCloudKey: false };
-  }
-
-  function extractJson(raw) {
-    var s = String(raw || "").trim();
-    s = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    try {
-      return JSON.parse(s);
-    } catch (_) {
-      var m = s.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error("Format respons JSON AI tidak terbaca.");
-      return JSON.parse(m[0]);
-    }
+    return {
+      id: "free",
+      label: "Gratis Tanpa Key (LanguageTool + MyMemory)"
+    };
   }
 
   function fetchWithTimeout(url, opts, timeoutMs) {
-    var ms = timeoutMs || 18000;
+    var ms = timeoutMs || 9000;
     if (typeof AbortController !== "undefined") {
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, ms);
@@ -99,70 +41,55 @@
     return window.fetch(url, opts);
   }
 
-  function callGeminiJson(promptText, cfg) {
-    var key = String(cfg.geminiKey || "").trim();
-    if (!key) return Promise.reject(new Error("API Key Gemini belum diisi."));
-    var model = cfg.geminiModel || "gemini-2.5-flash";
-    var url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
-
-    return fetchWithTimeout(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: {
-          temperature: 0.25,
-          responseMimeType: "application/json"
-        }
-      })
-    }, 22000).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok) {
-          var msg = (data && data.error && data.error.message) || ("Gemini HTTP " + res.status);
-          throw new Error(msg);
-        }
-        var part = data && data.candidates && data.candidates[0] &&
-          data.candidates[0].content && data.candidates[0].content.parts &&
-          data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
-        return { model: model, source: "Google Gemini (" + model + ")", data: extractJson(part) };
-      });
+  // Normalize casual/slang random Indonesian so free public machine translation understands everyday speech cleanly.
+  function normalizeRandomIndonesian(raw) {
+    var s = cleanStr(raw);
+    if (!s) return "";
+    var map = [
+      [/\b(?:gw|gue|gua|aku)\b/gi, "saya"],
+      [/\b(?:lu|lo|elu|kamu)\b/gi, "Anda"],
+      [/\b(?:gak|nggak|ga|ngga|engga|enggak|kagak|tdk)\b/gi, "tidak"],
+      [/\b(?:udah|udh|sdh)\b/gi, "sudah"],
+      [/\b(?:lg|lagi)\b/gi, "sedang"],
+      [/\b(?:capek|cape)\s+(?:bgt|banget|bgm)\b/gi, "sangat lelah"],
+      [/\bpusing\s+(?:bgt|banget|bgm)\b/gi, "sangat kewalahan"],
+      [/\b(macet|telat|sibuk|bagus|penting|lama|susah|sulit|mahal|murah|panas|hujan|deras|senang|bingung)\s+(?:bgt|banget|bgm)\b/gi, "sangat $1"],
+      [/\b(?:bgt|banget|bgm|amat)\b/gi, "sekali"],
+      [/\b(?:bener|beneran)\b/gi, "benar-benar"],
+      [/\b(?:soalnya|krn)\b/gi, "karena"],
+      [/\b(?:gara-gara|gara2)\b/gi, "akibat"],
+      [/\b(?:trus|terus)\b/gi, "lalu"],
+      [/\b(?:ntar|entar)\b/gi, "nanti"],
+      [/\b(?:gimana|gmn)\b/gi, "bagaimana"],
+      [/\b(?:kenapa|knp)\b/gi, "mengapa"],
+      [/\b(?:dikit|sdkt)\b/gi, "sedikit"],
+      [/\bmulu\b/gi, "terus-menerus"],
+      [/\bbikin\b/gi, "membuat"],
+      [/\bngomong\b/gi, "berbicara"],
+      [/\bkasih\s+tahu\b/gi, "memberi tahu"],
+      [/\bngasih\b/gi, "memberi"],
+      [/\bketahan\b/gi, "tertahan"],
+      [/\bpusing\b/gi, "kewalahan"],
+      [/\b(?:capek|cape)\b/gi, "lelah"],
+      [/\bmakasih\b/gi, "terima kasih"],
+      [/\bpengen|pingin\b/gi, "ingin"],
+      [/\bnumpuk\b/gi, "menumpuk"],
+      [/\b(?:cepet|cpt)\b/gi, "cepat"],
+      [/\b(?:kuy|yuk)\b/gi, "mari kita"],
+      [/\baja\b/gi, "saja"],
+      [/\b(?:kok|sih|nih|deh|loh|dong)\b/gi, ""],
+      [/\bseenak\s+jidat\b/gi, "sesuka hati"],
+      [/\b(?:yg)\b/gi, "yang"],
+      [/\b(?:dgn)\b/gi, "dengan"],
+      [/\b(?:utk)\b/gi, "untuk"],
+      [/\b(?:dlm)\b/gi, "dalam"],
+      [/\b(?:jg)\b/gi, "juga"],
+      [/\b(?:blm)\b/gi, "belum"]
+    ];
+    map.forEach(function (pair) {
+      s = s.replace(pair[0], pair[1]);
     });
-  }
-
-  function callGroqJson(promptText, cfg) {
-    var key = String(cfg.groqKey || "").trim();
-    if (!key) return Promise.reject(new Error("API Key Groq belum diisi."));
-    var model = cfg.groqModel || "llama-3.3-70b-versatile";
-    return fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + key
-      },
-      body: JSON.stringify({
-        model: model,
-        temperature: 0.25,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: "You are an elite bilingual English-Indonesian communication coach (IELTS Band 8.5+ and executive business standard). Output valid JSON only."
-          },
-          { role: "user", content: promptText }
-        ]
-      })
-    }, 22000).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok) {
-          var msg = (data && data.error && data.error.message) || ("Groq HTTP " + res.status);
-          throw new Error(msg);
-        }
-        var content = data && data.choices && data.choices[0] &&
-          data.choices[0].message && data.choices[0].message.content;
-        return { model: model, source: "Groq Cloud (" + model + ")", data: extractJson(content) };
-      });
-    });
+    return cleanStr(s);
   }
 
   function splitIntoChunks(text, maxLen) {
@@ -186,24 +113,37 @@
   }
 
   function callMyMemorySingle(text, langpair) {
+    var cacheKey = langpair + "|" + text;
+    if (translationCache[cacheKey]) {
+      return Promise.resolve(translationCache[cacheKey]);
+    }
+
     var url = "https://api.mymemory.translated.net/get?q=" +
       encodeURIComponent(text) + "&langpair=" + encodeURIComponent(langpair);
-    return fetchWithTimeout(url, { method: "GET" }, 8000).then(function (res) {
-      if (!res.ok) throw new Error("MyMemory HTTP " + res.status);
+
+    return fetchWithTimeout(url, { method: "GET" }, 9000).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
     }).then(function (json) {
-      var main = json && json.responseData && json.responseData.translatedText
+      var rawMain = json && json.responseData && json.responseData.translatedText
         ? cleanStr(json.responseData.translatedText)
         : "";
+      if (json && json.quotaFinished || isQuotaWarning(rawMain)) {
+        return { main: "", alts: [], quotaLimited: true };
+      }
       var alts = [];
       if (json && Array.isArray(json.matches)) {
         json.matches.forEach(function (m) {
-          if (m && m.translation && cleanStr(m.translation) && alts.indexOf(cleanStr(m.translation)) === -1) {
-            alts.push(cleanStr(m.translation));
+          var t = m && m.translation ? cleanStr(m.translation) : "";
+          var qScore = Number(m && m.quality || 0);
+          if (t && !isQuotaWarning(t) && qScore >= 50 && alts.indexOf(t) === -1) {
+            alts.push(t);
           }
         });
       }
-      return { main: main, alts: alts };
+      var out = { main: rawMain, alts: alts, quotaLimited: false };
+      if (rawMain) translationCache[cacheKey] = out;
+      return out;
     });
   }
 
@@ -211,9 +151,14 @@
     var chunks = splitIntoChunks(text, 440);
     return Promise.all(chunks.map(function (ch) { return callMyMemorySingle(ch, langpair); }))
       .then(function (results) {
+        var limited = results.some(function (r) { return r.quotaLimited; });
         var joined = results.map(function (r) { return r.main; }).filter(Boolean).join(" ");
         var altJoined = results.length === 1 ? results[0].alts : [];
-        return { main: cleanStr(joined), alts: altJoined };
+        return {
+          main: cleanStr(joined),
+          alts: altJoined,
+          quotaLimited: limited
+        };
       });
   }
 
@@ -224,16 +169,11 @@
     return "";
   }
 
-  function pickCloudRunner(cfg) {
-    var pref = cfg.provider || "auto";
-    if (pref === "free") return null;
-    if (pref === "gemini") return cfg.geminiKey ? callGeminiJson : null;
-    if (pref === "groq") return cfg.groqKey ? callGroqJson : null;
-    if (pref === "auto") {
-      if (cfg.groqKey) return callGroqJson;
-      if (cfg.geminiKey) return callGeminiJson;
+  function buildLevels(enText) {
+    if (window.JagoCoachCore && typeof window.JagoCoachCore.buildLeveledEnglish === "function") {
+      return window.JagoCoachCore.buildLeveledEnglish(enText, window.COACH_DATA || {});
     }
-    return null;
+    return { casualB1: enText, professionalB2: enText, executiveC1: enText };
   }
 
   function polishIndonesianEnglishTokens(text) {
@@ -246,362 +186,129 @@
   }
 
   function analyzeEnglish(text, localAnalysis) {
-    var cfg = loadConfig();
-    var runner = pickCloudRunner(cfg);
-
-    if (runner) {
-      var prompt = [
-        "Analyze the learner's English input below (it might include occasional Indonesian filler words or informal speech).",
-        "Preserve EVERY fact and proper noun (such as Kemal, Malik, IDAK, CDAKB, Kemenkes, kemiri) across ALL sentences.",
-        "Return strict JSON with these EXACT keys:",
-        "cefr: estimated current CEFR level string (e.g. 'A2', 'B1', 'B1+', 'B2', 'C1'),",
-        "statusBadge: short Indonesian assessment badge (e.g. 'Paham Maksudnya, Perlu Polesan Grammar' or 'Sudah Tepat & Natural'),",
-        "meaningId: complete, natural Indonesian translation explaining what a native English speaker actually understands from the user's input,",
-        "corrected: full grammatically accurate English version preserving the exact meaning across all sentences,",
-        "tiers: object with keys casual ({en, id}), professional ({en, id}), executive ({en, id}) representing everyday B1, business B2, and executive Band 8.0 C1 versions,",
-        "fixes: array of up to 5 objects {wrong: string, right: ENGLISH string, whyId: clear Bahasa Indonesia explanation},",
-        "nextEn: 1 helpful follow-up English sentence the user could say next,",
-        "nextId: natural Indonesian meaning of nextEn.",
-        "Do not use em-dashes or en-dashes. User English input: " + JSON.stringify(text)
-      ].join("\n");
-
-      return runner(prompt, cfg).then(function (res) {
-        var d = res.data || {};
-        var t = d.tiers || {};
-        function normTier(obj) {
-          var o = obj || {};
-          var en = cleanStr(o.en);
-          return {
-            en: en,
-            id: cleanStr(o.id),
-            phonetic: en ? toPhonetics(en) : ""
-          };
-        }
-        var fixes = Array.isArray(d.fixes) ? d.fixes.slice(0, 5).filter(function (f) {
-          return f && f.wrong && f.right;
-        }).map(function (f) {
-          return { wrong: cleanStr(f.wrong), right: cleanStr(f.right), whyId: cleanStr(f.whyId) };
-        }) : [];
-
-        return {
-          ok: true,
-          mode: "cloud-ai",
-          source: res.source,
-          cefr: cleanStr(d.cefr) || "B1+",
-          statusBadge: cleanStr(d.statusBadge) || "Analisis AI Aktif",
-          meaningId: cleanStr(d.meaningId),
-          corrected: cleanStr(d.corrected) || (localAnalysis && localAnalysis.corrected) || text,
-          tiers: {
-            casual: normTier(t.casual),
-            professional: normTier(t.professional),
-            executive: normTier(t.executive)
-          },
-          fixes: fixes,
-          nextEn: cleanStr(d.nextEn),
-          nextId: cleanStr(d.nextId)
-        };
-      });
-    }
-
-    if (cfg.provider === "local" && isLocalOrigin()) {
-      return analyzeEnglishLocalOllama(text, localAnalysis).catch(function () {
-        return analyzeEnglishFreeOnline(text, localAnalysis);
-      });
-    }
-
-    return analyzeEnglishFreeOnline(text, localAnalysis).catch(function () {
-      if (isLocalOrigin() && cfg.provider !== "free") {
-        return analyzeEnglishLocalOllama(text, localAnalysis);
-      }
-      return buildOfflineCoachFallback(text, localAnalysis);
-    });
-  }
-
-  function analyzeEnglishLocalOllama(text, localAnalysis) {
-    return fetchWithTimeout("/api/coach-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text })
-    }, 18000).then(function (r) {
-      if (!r.ok) throw new Error("local-off");
-      return r.json();
-    }).then(function (json) {
-      if (!json || !json.ok || !json.analysis) throw new Error("local-empty");
-      var a = json.analysis;
-      var execEn = cleanStr(a.c1Upgrade) || (localAnalysis && localAnalysis.c1Upgrade) || text;
-      var profEn = cleanStr(a.corrected) || (localAnalysis && localAnalysis.corrected) || text;
-      return {
-        ok: true,
-        mode: "local-ai",
-        source: "Ollama Lokal (" + (json.model || "llama3.2:3b") + ")",
-        cefr: localAnalysis && localAnalysis.stats ? ("Band ~" + localAnalysis.stats.overall.toFixed(1)) : "B1+",
-        statusBadge: cleanStr(a.topicId) || "Analisis Konteks Lokal",
-        meaningId: cleanStr(a.intentSummaryId),
-        corrected: profEn,
-        tiers: {
-          casual: { en: profEn, id: "", phonetic: toPhonetics(profEn) },
-          professional: { en: profEn, id: "", phonetic: toPhonetics(profEn) },
-          executive: { en: execEn, id: "", phonetic: toPhonetics(execEn) }
-        },
-        fixes: Array.isArray(a.fixes) ? a.fixes : [],
-        nextEn: cleanStr(a.nextEn),
-        nextId: cleanStr(a.nextId)
-      };
-    });
-  }
-
-  function buildOfflineCoachFallback(text, localAnalysis) {
     var corrected = (localAnalysis && localAnalysis.corrected) ? localAnalysis.corrected : text;
-    var c1 = (localAnalysis && localAnalysis.c1Upgrade) ? localAnalysis.c1Upgrade : corrected;
-    return {
-      ok: true,
-      mode: "offline",
-      source: "Engine Lokal Perangkat",
-      cefr: localAnalysis && localAnalysis.stats ? ("Est. Band " + localAnalysis.stats.overall.toFixed(1)) : "B1",
-      statusBadge: "Mode Offline",
-      meaningId: "",
-      corrected: corrected,
-      tiers: {
-        casual: { en: corrected, id: "", phonetic: toPhonetics(corrected) },
-        professional: { en: corrected, id: "", phonetic: toPhonetics(corrected) },
-        executive: { en: c1, id: "", phonetic: toPhonetics(c1) }
-      },
-      fixes: [],
-      nextEn: "",
-      nextId: ""
-    };
-  }
-
-  function analyzeEnglishFreeOnline(text, localAnalysis) {
-    var corrected = (localAnalysis && localAnalysis.corrected) ? localAnalysis.corrected : text;
-    var c1 = (localAnalysis && localAnalysis.c1Upgrade) ? localAnalysis.c1Upgrade : corrected;
+    var levels = buildLevels(corrected);
+    var execText = (localAnalysis && localAnalysis.c1Upgrade) ? localAnalysis.c1Upgrade : levels.executiveC1;
 
     return translateViaMyMemory(corrected, "en|id").then(function (tr) {
+      var statusNote = (localAnalysis && localAnalysis.findings && localAnalysis.findings.length > 0)
+        ? (localAnalysis.findings.length + " Poin Perbaikan Tata Bahasa")
+        : "Struktur Kalimat Rapi";
+
       return {
         ok: true,
-        mode: "free-online",
-        source: "Gratis Online (LanguageTool + MyMemory)",
+        mode: tr.quotaLimited ? "quota-limit" : "free-online",
+        source: tr.quotaLimited
+          ? "Engine Lokal (Limit Harian MyMemory Tercapai)"
+          : "Gratis Online (LanguageTool + MyMemory)",
+        quotaLimited: Boolean(tr.quotaLimited),
         cefr: localAnalysis && localAnalysis.stats ? ("Est. Band " + localAnalysis.stats.overall.toFixed(1)) : "B1",
-        statusBadge: (localAnalysis && localAnalysis.findings && localAnalysis.findings.length > 0)
-          ? (localAnalysis.findings.length + " Poin Perbaikan Ditemukan")
-          : "Struktur Kalimat Jelas",
+        statusBadge: statusNote,
         meaningId: tr.main || "",
         corrected: corrected,
         tiers: {
-          casual: { en: corrected, id: tr.main || "", phonetic: toPhonetics(corrected) },
-          professional: { en: corrected, id: tr.main || "", phonetic: toPhonetics(corrected) },
-          executive: { en: c1, id: tr.main || "", phonetic: toPhonetics(c1) }
-        },
-        fixes: [],
-        nextEn: "",
-        nextId: ""
+          casual: { en: levels.casualB1 || corrected, id: tr.main || "", phonetic: toPhonetics(levels.casualB1 || corrected) },
+          professional: { en: levels.professionalB2 || corrected, id: tr.main || "", phonetic: toPhonetics(levels.professionalB2 || corrected) },
+          executive: { en: execText || levels.executiveC1, id: tr.main || "", phonetic: toPhonetics(execText || levels.executiveC1) }
+        }
+      };
+    }).catch(function () {
+      return {
+        ok: true,
+        mode: "offline",
+        source: "Engine Lokal Perangkat (Offline)",
+        quotaLimited: false,
+        cefr: localAnalysis && localAnalysis.stats ? ("Est. Band " + localAnalysis.stats.overall.toFixed(1)) : "B1",
+        statusBadge: "Mode Offline",
+        meaningId: "",
+        corrected: corrected,
+        tiers: {
+          casual: { en: levels.casualB1 || corrected, id: "", phonetic: toPhonetics(levels.casualB1 || corrected) },
+          professional: { en: levels.professionalB2 || corrected, id: "", phonetic: toPhonetics(levels.professionalB2 || corrected) },
+          executive: { en: execText || levels.executiveC1, id: "", phonetic: toPhonetics(execText || levels.executiveC1) }
+        }
       };
     });
   }
 
   function translateIndonesian(indoText) {
-    var cfg = loadConfig();
-    var runner = pickCloudRunner(cfg);
+    var normalizedIndo = normalizeRandomIndonesian(indoText);
+    var changedSlang = normalizedIndo.toLowerCase() !== cleanStr(indoText).toLowerCase();
 
-    if (runner) {
-      var prompt = [
-        "The user is an Indonesian speaker expressing a thought freely in Indonesian (possibly casual, mixed with English, or unstructured).",
-        "Understand their real intent and convert it into high-standard English across levels, plus provide Indonesian back-translations so they know what each version sounds like.",
-        "Preserve every real name, acronym, time, or fact (such as Kemal, Malik, IDAK, CDAKB, Kemenkes, kemiri, Jakarta).",
-        "Write ready-to-say English sentences with ZERO bracket placeholders like [Name]. Never use em-dashes or en-dashes.",
-        "Return strict JSON with keys:",
-        "summaryId: 1 crisp Indonesian sentence confirming what you understood the user wants to say,",
-        "tipId: 1 practical grammar or vocabulary tip in Bahasa Indonesia explaining the upgrade,",
-        "levels: array of 3 objects with {code: 'B1'|'B2'|'C1', label: Indonesian label, en: English translation, backId: Indonesian back-translation of en, nuanceId: short Indonesian note on tone/listener impression},",
-        "formal: {en: formal email/executive phrasing, backId: Indonesian meaning},",
-        "casual: {en: friendly daily spoken/WhatsApp phrasing, backId: Indonesian meaning}.",
-        "Indonesian thought: " + JSON.stringify(indoText)
-      ].join("\n");
-
-      return runner(prompt, cfg).then(function (res) {
-        var d = res.data || {};
-        var lvls = Array.isArray(d.levels) ? d.levels.map(function (lv) {
-          var en = cleanStr(lv.en);
-          return {
-            code: cleanStr(lv.code) || "B2",
-            label: cleanStr(lv.label) || "Tingkat Lanjut",
-            en: en,
-            backId: cleanStr(lv.backId),
-            nuanceId: cleanStr(lv.nuanceId),
-            phonetic: toPhonetics(en)
-          };
-        }).filter(function (x) { return Boolean(x.en); }) : [];
-
+    return translateViaMyMemory(normalizedIndo, "id|en").then(function (res) {
+      if (res.quotaLimited || !res.main) {
         return {
           ok: true,
-          mode: "cloud-ai",
-          source: res.source,
-          summaryId: cleanStr(d.summaryId),
-          tipId: cleanStr(d.tipId),
-          levels: lvls,
-          formal: {
-            en: cleanStr(d.formal && d.formal.en),
-            backId: cleanStr(d.formal && d.formal.backId),
-            phonetic: toPhonetics(cleanStr(d.formal && d.formal.en))
-          },
-          casual: {
-            en: cleanStr(d.casual && d.casual.en),
-            backId: cleanStr(d.casual && d.casual.backId),
-            phonetic: toPhonetics(cleanStr(d.casual && d.casual.en))
-          }
+          quotaLimited: Boolean(res.quotaLimited),
+          source: res.quotaLimited ? "Limit Harian MyMemory Tercapai" : "Mode Offline",
+          normalizedIndo: changedSlang ? normalizedIndo : "",
+          summaryId: res.quotaLimited
+            ? "Kuota harian gratis MyMemory sedang penuh sementara. Pelajari jembatan frasa dan nuansa kosakata di atas sambil menunggu reset otomatis."
+            : "Koneksi internet ke MyMemory tidak terjangkau.",
+          tipId: "Tetap berlatih menyusun kalimat memakai frasa inti di atas, lalu tempel hasilnya di Mode A untuk pemeriksaan tata bahasa.",
+          levels: []
         };
-      });
-    }
-
-    if (cfg.provider === "local" && isLocalOrigin()) {
-      return translateIndonesianLocalOllama(indoText).catch(function () {
-        return translateIndonesianFreeOnline(indoText);
-      });
-    }
-
-    return translateIndonesianFreeOnline(indoText).catch(function (err) {
-      if (isLocalOrigin() && cfg.provider !== "free") {
-        return translateIndonesianLocalOllama(indoText);
-      }
-      throw err;
-    });
-  }
-
-  function translateIndonesianLocalOllama(indoText) {
-    return fetchWithTimeout("/api/translate-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ indo: indoText })
-    }, 16000).then(function (r) {
-      if (!r.ok) throw new Error("local-off");
-      return r.json();
-    }).then(function (json) {
-      if (!json || !json.ok || !json.translation) throw new Error("local-empty");
-      var tr = json.translation;
-      var levels = [];
-      if (tr.b1) levels.push({ code: "B1", label: "Santai & Jelas (Sehari-hari)", en: cleanStr(tr.b1), backId: "", nuanceId: "Langsung dipahami untuk obrolan harian.", phonetic: toPhonetics(tr.b1) });
-      if (tr.b2) levels.push({ code: "B2", label: "Kerja Profesional (Bisnis)", en: cleanStr(tr.b2), backId: "", nuanceId: "Sopan dan rapi untuk mitra kerja.", phonetic: toPhonetics(tr.b2) });
-      if (tr.c1) levels.push({ code: "C1", label: "Eksekutif Standar Band 8.0", en: cleanStr(tr.c1), backId: "", nuanceId: "Berwibawa untuk rapat atau email resmi.", phonetic: toPhonetics(tr.c1) });
-      return {
-        ok: true,
-        mode: "local-ai",
-        source: "Ollama Lokal (" + (json.model || "llama3.2:3b") + ")",
-        summaryId: "Hasil terjemahan kontekstual dari kalimat bebasmu.",
-        tipId: cleanStr(tr.tipId),
-        levels: levels,
-        formal: { en: cleanStr(tr.formal), backId: "", phonetic: toPhonetics(tr.formal) },
-        casual: { en: cleanStr(tr.casual), backId: "", phonetic: toPhonetics(tr.casual) }
-      };
-    });
-  }
-
-  function translateIndonesianFreeOnline(indoText) {
-    return translateViaMyMemory(indoText, "id|en").then(function (res) {
-      var primaryEn = polishIndonesianEnglishTokens(res.main || "");
-      if (!primaryEn) throw new Error("Terjemahan publik tidak tersedia.");
-      var altEn = res.alts.filter(function (a) { return a.toLowerCase() !== primaryEn.toLowerCase(); })[0];
-      var polishedAlt = altEn ? polishIndonesianEnglishTokens(altEn) : primaryEn;
-      var c1Text = primaryEn;
-      if (window.JagoCoachCore && typeof window.JagoCoachCore.buildBand75Upgrade === "function" && window.COACH_DATA) {
-        c1Text = cleanStr(window.JagoCoachCore.buildBand75Upgrade(primaryEn, window.COACH_DATA)) || primaryEn;
       }
 
-      return translateViaMyMemory(c1Text, "en|id").catch(function () { return { main: indoText }; }).then(function (backRes) {
-        var backId = cleanStr(backRes && backRes.main) || indoText;
+      var primaryEn = polishIndonesianEnglishTokens(res.main);
+      var built = buildLevels(primaryEn);
+      var altCandidate = res.alts.filter(function (a) {
+        return a.toLowerCase() !== primaryEn.toLowerCase() &&
+          a.toLowerCase() !== built.professionalB2.toLowerCase();
+      })[0];
+      var b2Text = altCandidate ? polishIndonesianEnglishTokens(altCandidate) : built.professionalB2;
+      var c1Text = built.executiveC1;
+
+      return translateViaMyMemory(b2Text, "en|id").catch(function () {
+        return { main: normalizedIndo, quotaLimited: false };
+      }).then(function (backRes) {
+        var backId = (!backRes.quotaLimited && backRes.main) ? backRes.main : normalizedIndo;
         var levels = [
           {
             code: "B1",
-            label: "Versi Dasar Jelas (Sehari-hari)",
-            en: primaryEn,
+            label: "Santai & Jelas (Sehari-hari)",
+            en: built.casualB1,
             backId: backId,
-            nuanceId: "Kalimat lugas yang langsung menyampaikan inti pikiranmu.",
-            phonetic: toPhonetics(primaryEn)
-          }
-        ];
-        if (polishedAlt && polishedAlt !== primaryEn) {
-          levels.push({
+            nuanceId: "Ramah dan langsung mengalir untuk obrolan harian atau WhatsApp.",
+            phonetic: toPhonetics(built.casualB1)
+          },
+          {
             code: "B2",
-            label: "Variasi Alternatif Natural",
-            en: polishedAlt,
+            label: "Kerja Profesional (Bisnis)",
+            en: b2Text,
             backId: backId,
-            nuanceId: "Pilihan kata berbeda dengan makna setara.",
-            phonetic: toPhonetics(polishedAlt)
-          });
-        }
-        if (c1Text && c1Text !== primaryEn) {
-          levels.push({
+            nuanceId: "Rapi, sopan, dan jelas untuk komunikasi kantor atau klien.",
+            phonetic: toPhonetics(b2Text)
+          },
+          {
             code: "C1",
-            label: "Polesan Lebih Formal & Rapi",
+            label: "Eksekutif Standar Tinggi (IELTS 7.5+)",
             en: c1Text,
             backId: backId,
-            nuanceId: "Versi lebih profesional saat berbicara ke mitra atau klien.",
+            nuanceId: "Pilihan kosakata lebih matang dan meyakinkan di rapat formal.",
             phonetic: toPhonetics(c1Text)
-          });
-        }
+          }
+        ];
+
         return {
           ok: true,
-          mode: "free-online",
+          quotaLimited: false,
           source: "Gratis Online (MyMemory + Engine Tata Bahasa)",
-          summaryId: "Terjemahan langsung dari pikiran bahasa Indonesiamu beserta arti baliknya.",
-          tipId: "Cek bagian 'Arti balik ke Indonesia' untuk memastikan maksudnya sudah sesuai sebelum diucapkan. Untuk variasi eksekutif A2 sampai C2 yang lebih mendalam, kamu juga bisa mengisi Key gratis Gemini/Groq di Tab 4.",
+          normalizedIndo: changedSlang ? normalizedIndo : "",
+          summaryId: "Arti bebasmu sudah dirapikan menjadi bahasa Inggris bertingkat lengkap dengan arti baliknya.",
+          tipId: "Cek kotak 'Arti balik & maksudnya' untuk memastikan nuansa kalimat sudah sesuai keinginanmu sebelum diucapkan.",
           levels: levels,
           formal: { en: c1Text, backId: backId, phonetic: toPhonetics(c1Text) },
-          casual: { en: primaryEn, backId: backId, phonetic: toPhonetics(primaryEn) }
+          casual: { en: built.casualB1, backId: backId, phonetic: toPhonetics(built.casualB1) }
         };
       });
-    });
-  }
-
-  function transcribeWithGroqWhisper(blob, lang, promptHint) {
-    var cfg = loadConfig();
-    var key = String(cfg.groqKey || "").trim();
-    if (!key) return Promise.reject(new Error("Groq Key belum diisi."));
-    var fd = new FormData();
-    var ext = (blob && blob.type && blob.type.indexOf("mp4") !== -1) ? "m4a" : "webm";
-    fd.append("file", blob, "speech." + ext);
-    fd.append("model", "whisper-large-v3-turbo");
-    if (lang === "id" || lang === "en") fd.append("language", lang);
-    if (promptHint) fd.append("prompt", String(promptHint).slice(0, 200));
-
-    return fetchWithTimeout("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + key },
-      body: fd
-    }, 25000).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok) {
-          throw new Error((data && data.error && data.error.message) || ("Groq Whisper HTTP " + res.status));
-        }
-        return { text: cleanStr(data && data.text), engine: "groq-whisper" };
-      });
-    });
-  }
-
-  function testConnection(providerChoice) {
-    var cfg = loadConfig();
-    var p = providerChoice || cfg.provider || "auto";
-    if (p === "gemini") {
-      return callGeminiJson('Return strict JSON {"ok":true,"msg":"Koneksi Gemini berhasil!"}', cfg);
-    }
-    if (p === "groq") {
-      return callGroqJson('Return strict JSON {"ok":true,"msg":"Koneksi Groq berhasil!"}', cfg);
-    }
-    return translateViaMyMemory("Selamat pagi, apa kabar?", "id|en").then(function (res) {
-      return {
-        source: "Gratis Online (MyMemory + LanguageTool)",
-        data: { ok: Boolean(res.main), msg: "Layanan gratis online siap: " + res.main }
-      };
     });
   }
 
   window.JagoAI = {
-    loadConfig: loadConfig,
-    saveConfig: saveConfig,
     getActiveTierInfo: getActiveTierInfo,
-    isLocalOrigin: isLocalOrigin,
+    normalizeRandomIndonesian: normalizeRandomIndonesian,
     analyzeEnglish: analyzeEnglish,
-    translateIndonesian: translateIndonesian,
-    transcribeWithGroqWhisper: transcribeWithGroqWhisper,
-    testConnection: testConnection
+    translateIndonesian: translateIndonesian
   };
 })();

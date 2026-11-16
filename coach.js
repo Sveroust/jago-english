@@ -467,6 +467,16 @@
         }
         var added = analysisSnapshot.findings.length - beforeCount;
         analysisSnapshot.ltStatus = added > 0 ? "added:" + added : "clean";
+        if (added > 0 && analysisSnapshot.aiData && CORE.buildLeveledEnglish) {
+          var rebuilt = CORE.buildLeveledEnglish(analysisSnapshot.corrected, DATA);
+          var meanId = analysisSnapshot.aiData.meaningId || "";
+          analysisSnapshot.aiData.tiers = {
+            casual: { en: rebuilt.casualB1, id: meanId, phonetic: CORE.toIndonesianPhonetics(rebuilt.casualB1, DATA.phoneticMap) },
+            professional: { en: rebuilt.professionalB2, id: meanId, phonetic: CORE.toIndonesianPhonetics(rebuilt.professionalB2, DATA.phoneticMap) },
+            executive: { en: rebuilt.executiveC1, id: meanId, phonetic: CORE.toIndonesianPhonetics(rebuilt.executiveC1, DATA.phoneticMap) }
+          };
+          analysisSnapshot.aiData.statusBadge = analysisSnapshot.findings.length + " Poin Perbaikan Tata Bahasa";
+        }
         if (cs.sub === "analyze") renderResults();
       })
       .catch(function () {
@@ -535,7 +545,9 @@
         '<span class="meaning-label">Maksud kalimatmu di telinga lawan bicara (Bahasa Indonesia):</span>' +
         '<p class="meaning-text">"' + esc(ai.meaningId) + '"</p>' +
         '</div>'
-      : '';
+      : (ai.quotaLimited
+        ? '<div class="state-banner">Batas kuota terjemah harian gratis MyMemory sedang tercapai sementara dan akan pulih otomatis. Pemeriksaan grammar dan 3 tingkatan kalimat Inggris tetap aktif di bawah.</div>'
+        : '');
 
     var tiers = ai.tiers || {};
     var tierList = [

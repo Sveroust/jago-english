@@ -281,8 +281,7 @@
       var recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       session.recorder = recorder;
 
-      var meterLabel = health && health.cloudGroq ? "Groq Whisper Online" : "Whisper Lokal";
-      var uid = mountAudioMeter(stream, session, opts.statusEl, meterLabel, true);
+      var uid = mountAudioMeter(stream, session, opts.statusEl, "Whisper Lokal", true);
       session.startedAt = Date.now();
 
       recorder.ondataavailable = function (ev) {
@@ -306,37 +305,6 @@
         if (blob.size < 800) {
           renderStatus(opts.statusEl, '<div class="state-banner is-error">Data suara kosong (' + blob.size + ' byte). Cek izin atau perangkat mikrofon Anda.</div>');
           if (opts.onError) opts.onError("empty-blob");
-          return;
-        }
-
-        if (health && health.cloudGroq && window.JagoAI) {
-          renderStatus(
-            opts.statusEl,
-            '<div class="state-banner" role="status"><strong>Memproses suara dengan Groq Whisper (' + esc(health.modelName || "whisper-large-v3-turbo") + ')...</strong> Tunggu sejenak.</div>'
-          );
-          var tStart = Date.now();
-          window.JagoAI.transcribeWithGroqWhisper(blob, mapSpeechLang(opts.lang), opts.promptHint || "")
-            .then(function (out) {
-              var text = String((out && out.text) || "").trim();
-              if (!text) {
-                renderStatus(opts.statusEl, '<div class="state-banner is-error" role="alert">Tidak ada kata yang jelas tertangkap. Dekatkan mikrofon dan coba lagi.</div>');
-                if (opts.onError) opts.onError("blank-audio");
-                return;
-              }
-              var ms = Date.now() - tStart;
-              renderStatus(
-                opts.statusEl,
-                '<div class="state-banner is-success"><strong>Suara tertangkap (' + ms + ' ms):</strong> "' + esc(text) + '"</div>'
-              );
-              if (opts.onResult) opts.onResult(text, { engine: "groq-whisper", elapsedMs: ms });
-            })
-            .catch(function (err) {
-              renderStatus(
-                opts.statusEl,
-                '<div class="state-banner is-error" role="alert">Gagal memproses suara via Groq: ' + esc(err && err.message ? err.message : "error") + "</div>"
-              );
-              if (opts.onError) opts.onError("groq-failed");
-            });
           return;
         }
 
@@ -517,14 +485,9 @@
       var canRecord = navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof MediaRecorder !== "undefined";
       if (health && health.available && canRecord) {
         startWhisperSession(opts, health);
-        return;
+      } else {
+        startBrowserFallbackSession(opts);
       }
-      var aiCfg = window.JagoAI ? window.JagoAI.loadConfig() : null;
-      if (aiCfg && aiCfg.useGroqWhisper && aiCfg.groqKey && canRecord) {
-        startWhisperSession(opts, { cloudGroq: true, modelName: "whisper-large-v3-turbo" });
-        return;
-      }
-      startBrowserFallbackSession(opts);
     });
   }
 

@@ -159,13 +159,34 @@ const URL = "http://localhost:8088/";
   assert.ok(coachAfterPractice.toLowerCase().includes("jakarta") || coachAfterPractice.toLowerCase().includes("rain"), "Latih Ucapkan should load sentence into Side A");
   console.log("PASS: Side B Leveled English + Back-Translation + Custom Template + Practice Handoff verified.");
 
-  console.log("8. Verifying Hub 4 AI Online Settings Persistence...");
-  await page.click("#tab-hub-progress");
-  await page.click("#tab-btn-ai-settings");
-  await page.selectOption("#ai-provider-select", "free");
-  await page.click("#ai-save-cfg-btn");
-  assert.ok((await page.textContent("#ai-settings-feedback")).includes("tersimpan"), "Settings saved feedback shown");
-  console.log("PASS: AI Settings panel persistence verified.");
+  console.log("8. Verifying Random Slang Normalization & MyMemory Quota-Limit Safety...");
+  await page.click("#tab-hub-studio");
+  await page.click("#tab-btn-translate");
+  await page.fill("#translate-input", "Bro gw lagi capek bgt nih soalnya kerjaan numpuk dan jalanan macet");
+  await page.click("#translate-run-btn");
+  await page.waitForSelector("#translate-ai-slot .ladder-step", { timeout: 6000 });
+  const slangOut = await page.textContent("#translate-ai-slot");
+  assert.ok(slangOut.includes("sangat lelah karena"), "Slang normalization should map gw/capek bgt/soalnya cleanly");
+
+  // Also simulate MyMemory quota warning and verify graceful Indonesian fallback without raw MYMEMORY WARNING text
+  await page.unroute("https://api.mymemory.translated.net/**");
+  await page.route("https://api.mymemory.translated.net/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        responseData: { translatedText: "MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY." },
+        quotaFinished: true
+      })
+    });
+  });
+  await page.fill("#translate-input", "Tolong cek jadwal macet bandara besok ya bro");
+  await page.click("#translate-run-btn");
+  await page.waitForSelector("#translate-ai-slot .panel-card", { timeout: 5000 });
+  const quotaText = await page.textContent("#translate-ai-slot");
+  assert.ok(!quotaText.includes("MYMEMORY WARNING"), "Must never leak raw MYMEMORY WARNING string to UI");
+  assert.ok(quotaText.includes("Limit Harian MyMemory Tercapai"), "Should display helpful Indonesian quota notice");
+  console.log("PASS: Random slang normalization and MyMemory quota guard verified.");
 
   console.log("9. Verifying 390px Phone Compact Sidebar & Zero Overflow across ALL 4 Hubs & Sub-views...");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -181,8 +202,7 @@ const URL = "http://localhost:8088/";
     ["#tab-hub-grammar", "#tab-btn-diagnostic"],
     ["#tab-hub-progress", "#tab-btn-progress-plan"],
     ["#tab-hub-progress", "#tab-btn-progress-notebook"],
-    ["#tab-hub-progress", "#tab-btn-progress-tracker"],
-    ["#tab-hub-progress", "#tab-btn-ai-settings"]
+    ["#tab-hub-progress", "#tab-btn-progress-tracker"]
   ];
   for (const [hubSel, subSel] of navChecks) {
     await page.click(hubSel);
@@ -197,7 +217,7 @@ const URL = "http://localhost:8088/";
   assert.ok(sbHeight <= 240, `Expected compact topics sidebar <= 240px on mobile, got ${sbHeight}`);
   const navBox = await page.locator("#tab-hub-studio").boundingBox();
   assert.ok(navBox && navBox.height >= 44, `Expected mobile Hub nav tab height >= 44px, got ${navBox && navBox.height}`);
-  console.log("PASS: All 13 Hub+Sub views verified with 0px overflow at 390px mobile!");
+  console.log("PASS: All 12 Hub+Sub views verified with 0px overflow at 390px mobile!");
 
   assert.strictEqual(errors.length, 0, `Page errors encountered: ${errors.join(", ")}`);
   console.log("ALL LATEST FEATURE TESTS PASSED (0 ERRORS)!");

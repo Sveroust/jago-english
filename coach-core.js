@@ -225,7 +225,32 @@
       [/\bSo we finally have our regulatory compliance in place\.?/gi, "Consequently, we have secured our foundational regulatory clearance."],
       [/\bWe are now legally compliant for business\.?/gi, "Our company is now legally authorized to operate commercially."],
       [/\b(?:We|we)\s+are\s+currently\s+preparing\s+IDAK\s+and\s+CDAKB\s+for\s+regulatory,?\s+mandatory\s+and\s+then\s+for\s+(?:the\s+)?Indonesian\s+Ministry\s+of\s+Health\b/gi,
-        "We are currently preparing our mandatory IDAK (Medical Device Distributor License) and CDAKB (Good Distribution Practice) submissions for the Indonesian Ministry of Health"]
+        "We are currently preparing our mandatory IDAK (Medical Device Distributor License) and CDAKB (Good Distribution Practice) submissions for the Indonesian Ministry of Health"],
+      [/\bI'm\b/g, "I am"],
+      [/\bwe're\b/gi, function (m) { return m[0] === "W" ? "We are" : "we are"; }],
+      [/\byou're\b/gi, function (m) { return m[0] === "Y" ? "You are" : "you are"; }],
+      [/\bthey're\b/gi, function (m) { return m[0] === "T" ? "They are" : "they are"; }],
+      [/\bdon't\b/gi, function (m) { return m[0] === "D" ? "Do not" : "do not"; }],
+      [/\bcan't\b/gi, function (m) { return m[0] === "C" ? "Cannot" : "cannot"; }],
+      [/\bwon't\b/gi, function (m) { return m[0] === "W" ? "Will not" : "will not"; }],
+      [/\bdidn't\b/gi, function (m) { return m[0] === "D" ? "Did not" : "did not"; }],
+      [/\bit's\b/gi, function (m) { return m[0] === "I" ? "It is" : "it is"; }],
+      [/\bvery\s+good\b/gi, "remarkable"],
+      [/\bvery\s+bad\b/gi, "severe"],
+      [/\bvery\s+tired\b/gi, "thoroughly exhausted"],
+      [/\bvery\s+busy\b/gi, "heavily occupied"],
+      [/\bmake\s+sure\b/gi, "ensure"],
+      [/\bI\s+am\s+sorry\s+(?:for|about)\b/gi, "Please accept my apologies for"],
+      [/\bI\s+apologize\s+(?:for|about)\b/gi, "Please accept my sincere apologies regarding"],
+      [/\bright\s+now\b/gi, "currently"],
+      [/\bbecause\s+of\b/gi, "due to"],
+      [/\btalk\s+about\b/gi, "discuss"],
+      [/\bhelp\s+me\b/gi, "assist me"],
+      [/\bfix\s+(?:the|this|our)\b/gi, "resolve $1"],
+      [/\bask\s+for\b/gi, "request"],
+      [/\btell\s+(?:me|us|him|her|them)\b/gi, function (m) { return m.replace(/tell/i, "inform"); }],
+      [/\bslightly\s+delayed\b/gi, "temporarily behind schedule"],
+      [/\bagak\s+telat\b/gi, "slightly delayed"]
     ];
 
     replacements.forEach(function (pair) {
@@ -233,6 +258,49 @@
     });
 
     return s;
+  }
+
+  function buildLeveledEnglish(correctedText, data) {
+    var base = String(correctedText || "").trim();
+    if (!base) {
+      return { casualB1: "", professionalB2: "", executiveC1: "" };
+    }
+
+    var casual = base
+      .replace(/\bI am\b/g, "I'm")
+      .replace(/\b([Ww])e are\b/g, "$1e're")
+      .replace(/\b([Yy])ou are\b/g, "$1ou're")
+      .replace(/\b([Tt])hey are\b/g, "$1hey're")
+      .replace(/\b([Dd])o not\b/g, "$1on't")
+      .replace(/\b([Cc])annot\b/g, "$1an't")
+      .replace(/\b([Ww])ill not\b/g, "$1on't")
+      .replace(/\b([Dd])id not\b/g, "$1idn't")
+      .replace(/\b([Ii])t is\b/g, "$1t's")
+      .replace(/\bPlease accept my apologies (?:for|regarding)\b/gi, "Sorry about")
+      .replace(/\bapologize for\b/gi, "am sorry about")
+      .replace(/\brequest\b/gi, "ask for")
+      .replace(/\bassist\b/gi, "help")
+      .replace(/\bcurrently\b/gi, "right now");
+
+    var prof = base
+      .replace(/\bI'm\b/g, "I am")
+      .replace(/\b([Ww])e're\b/g, "$1e are")
+      .replace(/\b([Yy])ou're\b/g, "$1ou are")
+      .replace(/\b([Tt])hey're\b/g, "$1hey are")
+      .replace(/\b([Dd])on't\b/g, "$1o not")
+      .replace(/\b([Cc])an't\b/g, "$1annot")
+      .replace(/\b([Ww])on't\b/g, "$1ill not")
+      .replace(/\b([Dd])idn't\b/g, "$1id not")
+      .replace(/\b([Ii])t's\b/g, "$1t is")
+      .replace(/\bSorry (?:about|for)\b/gi, "Apologies for")
+      .replace(/\ba bit late\b/gi, "slightly delayed");
+
+    var exec = buildBand75Upgrade(prof, data || {});
+    return {
+      casualB1: casual,
+      professionalB2: prof,
+      executiveC1: exec
+    };
   }
 
   function countMatches(re, text) {
@@ -542,6 +610,7 @@
     analyze: analyze,
     toIndonesianPhonetics: toIndonesianPhonetics,
     buildBand75Upgrade: buildBand75Upgrade,
+    buildLeveledEnglish: buildLeveledEnglish,
     detectIntentAndNext: detectIntentAndNext,
     mergeLanguageToolMatches: mergeLanguageToolMatches,
     diffWords: diffWords,
