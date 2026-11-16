@@ -1374,8 +1374,10 @@
     }
   }
 
-  // Live update polling when running on local dev server (http://localhost:8088)
-  if (window.location.protocol.indexOf("http") === 0 && window.fetch) {
+  // Live update polling only when running on local dev server (http://localhost:8088)
+  var hostName = (window.location && window.location.hostname) || "";
+  var isLocalDev = hostName === "localhost" || hostName === "127.0.0.1";
+  if (isLocalDev && window.location.protocol.indexOf("http") === 0 && window.fetch) {
     var knownVersion = null;
     setInterval(function () {
       window.fetch("/__version", { cache: "no-store" })
